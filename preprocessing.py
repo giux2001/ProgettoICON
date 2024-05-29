@@ -3,8 +3,8 @@ import geopandas as gpd
 from shapely.geometry import Point
 import re
 
-FOOD_INSPECTIONS = "dataset/Food_Inspections_20240520.csv"
-PUBLIC_HEALTH_STATISTICS = "dataset/Public_Health_Statistics_-_Selected_public_health_indicators_by_Chicago_community_area_-_Historical_20240520.csv"
+FOOD_INSPECTIONS = "Food_Inspections_20240520.csv"
+PUBLIC_HEALTH_STATISTICS = "Public_Health_Statistics_-_Selected_public_health_indicators_by_Chicago_community_area_-_Historical_20240520.csv"
 
 def preprocesse_food_inspections():
 
@@ -69,7 +69,7 @@ def preprocesse_food_inspections():
     #df = pd.read_csv("dataset/Food_Inspections_preprocessed.csv")
     #Sostituisci daycare (2 - 6 years) con daycare
     
-    df.to_csv("dataset/Food_Inspections_preprocessed.csv", index=False)
+    df.to_csv("Food_Inspections_preprocessed.csv", index=False)
 
     print("DATASET FOOD INSPECTIONS")
     return df
@@ -83,7 +83,7 @@ def preprocesse_public_health_statistics():
     #Rimangono Community Area Name, Omicidi, Cancer, Diabete, Infant Mortality, Stroke, Poverty Level, Crowded Housing, Per Capita Income, Unemployment
     df.drop(colonne_da_eliminare, axis=1, inplace=True)
     print("DATASET PUBLIC HEALTH STATISTICS")
-    df.to_csv("dataset/Public_Health_Statistics_preprocessed.csv", index=False)
+    df.to_csv("Public_Health_Statistics_preprocessed.csv", index=False)
     return df
 
 def estrazione_codici(violazioni):
@@ -110,7 +110,7 @@ def joinDataset(food, health):
     food["Community Area Name"] = food["Community Area Name"].str.lower()
     health["Community Area Name"] = health["Community Area Name"].str.lower()
     df = pd.merge(food, health, on="Community Area Name", how="inner")
-    df.to_csv("dataset/Food_Inspections_and_Health_Statistics.csv", index=False)
+    df.to_csv("Food_Inspections_and_Health_Statistics.csv", index=False)
 
 Food = preprocesse_food_inspections()
 Health = preprocesse_public_health_statistics()
