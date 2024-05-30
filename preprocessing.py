@@ -2,9 +2,10 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 import re
+from pyswip import Prolog
 
-FOOD_INSPECTIONS = "Food_Inspections_20240520.csv"
-PUBLIC_HEALTH_STATISTICS = "Public_Health_Statistics_-_Selected_public_health_indicators_by_Chicago_community_area_-_Historical_20240520.csv"
+FOOD_INSPECTIONS = "dataset/Food_Inspections_20240520.csv"
+PUBLIC_HEALTH_STATISTICS = "dataset/Public_Health_Statistics_-_Selected_public_health_indicators_by_Chicago_community_area_-_Historical_20240520.csv"
 
 def preprocesse_food_inspections():
 
@@ -69,7 +70,7 @@ def preprocesse_food_inspections():
     #df = pd.read_csv("dataset/Food_Inspections_preprocessed.csv")
     #Sostituisci daycare (2 - 6 years) con daycare
     
-    df.to_csv("Food_Inspections_preprocessed.csv", index=False)
+    df.to_csv("dataset/Food_Inspections_preprocessed.csv", index=False)
 
     print("DATASET FOOD INSPECTIONS")
     return df
@@ -83,7 +84,7 @@ def preprocesse_public_health_statistics():
     #Rimangono Community Area Name, Omicidi, Cancer, Diabete, Infant Mortality, Stroke, Poverty Level, Crowded Housing, Per Capita Income, Unemployment
     df.drop(colonne_da_eliminare, axis=1, inplace=True)
     print("DATASET PUBLIC HEALTH STATISTICS")
-    df.to_csv("Public_Health_Statistics_preprocessed.csv", index=False)
+    df.to_csv("dataset/Public_Health_Statistics_preprocessed.csv", index=False)
     return df
 
 def estrazione_codici(violazioni):
@@ -110,9 +111,57 @@ def joinDataset(food, health):
     food["Community Area Name"] = food["Community Area Name"].str.lower()
     health["Community Area Name"] = health["Community Area Name"].str.lower()
     df = pd.merge(food, health, on="Community Area Name", how="inner")
-    df.to_csv("Food_Inspections_and_Health_Statistics.csv", index=False)
+    df = df.dropna()
+    df.to_csv("dataset/Food_Inspections_and_Health_Statistics.csv", index=False)
 
-Food = preprocesse_food_inspections()
-Health = preprocesse_public_health_statistics()
-joinDataset(Food, Health)
+#Food = preprocesse_food_inspections()
+#Health = preprocesse_public_health_statistics()
+#joinDataset(Food, Health)
+
+def save_Food_and_Health_in_KB():
+    df = pd.read_csv("dataset/Food_Inspections_and_Health_Statistics.csv")
+    #Definisci fatti per il dataset Food Inspections da salvare in facts.pl
+    prolog = Prolog()
+
+    for index, row in df.iterrows():
+        #Fatti per Food Inspections
+        inspection_id = f"inspection_id({row['Inspection ID']})"
+        inspections_facts = [f"facility_name({inspection_id}, '{row['DBA Name']}')",
+                             f"facility_type({inspection_id}, '{row['Facility Type']}')",
+                             f"risk({inspection_id}, {row['Risk']})",
+                             f"results({inspection_id}, {row['Results']})",
+                             f"violations({inspection_id}, {row['Violations']})",
+                             f"community_area({inspection_id}, '{row['Community Area Name']}')",
+                             f"inspection_date({inspection_id}, '{row['Inspection Date']}')"]
+                             
+        #Fatti per Community Area
+        community_area = f"community_area('{row['Community Area Name']}')"
+        community_area_facts = [f"inspection_in_community_area({inspection_id}, {community_area})",
+                                f"birth_rate({community_area}, {row['Birth Rate']})",
+                                f"general_fertility_rate({community_area}, {row['General Fertility Rate']})",
+                                f"low_birth_weight({community_area}, {row['Low Birth Weight']})",
+                                f"prenatal_care_beginning_in_first_trimester({community_area}, {row['Prenatal Care Beginning in First Trimester']})",
+                                f"premterme_births({community_area}, {row['Preterm Births']})",
+                                f"teen_birth_rate({community_area}, {row['Teen Birth Rate']})",
+                                f"assault({community_area}, {row['Assault (Homicide)']})",
+                                f"breast_cancer_in_females({community_area}, {row['Breast cancer in females']})",
+                                f"cancer_all_sites({community_area}, {row['Cancer (All Sites)']})",
+                                f"colorectal_cancer({community_area}, {row['Colorectal Cancer']})",
+                                f"diabetes_related({community_area}, {row['Diabetes-related']})",
+                                f"firearm_related({community_area}, {row['Firearm-related']})",
+                                f"infant_mortality_rate({community_area}, {row['Infant Mortality Rate']})",
+                                f"lung_cancer({community_area}, {row['Lung Cancer']})",
+                                f"prostate_cancer_in_males({community_area}, {row['Prostate Cancer in Males']})",
+                                f"stroke({community_area}, {row['Stroke (Cerebrovascular Disease)']})",
+                                f"childhood_poisoning({community_area}, {row['Childhood Lead Poisoning']})",
+                                f"gonorrhea_in_females({community_area}, {row['Gonorrhea in Females']})",
+                                f"gonorrhea_in_males({community_area}, {row['Gonorrhea in Males']})",
+                                f"tubercolosis({community_area}, {row['Tuberculosis']})",
+                                f"below_poverty_level({community_area}, {row['Below Poverty Level']})",
+                                f"crowded_housing({community_area}, {row['Crowded Housing']})",
+                                f"per_capita_income({community_area}, {row['Per Capita Income']})",
+                                f"unemployment({community_area}, {row['Unemployment']})"]
+
+
+
 
