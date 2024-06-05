@@ -160,10 +160,8 @@ for key, value in d.items():
             df.loc[df["DBA Name"] == key, "Violations on Management and Supervision"] = 1
         if v >= 11 and v <= 17 or v >= 27 and v <= 28:
             df.loc[df["DBA Name"] == key, "Violations on Hygiene and Food Security"] = 1
-        if v >= 11 and v <= 17:
-            df.loc[df["DBA Name"] == key, "Violations on Temperature and Special Procedures"] = 1
         if (v >= 18 and v <= 26) or v == 29:
-            df.loc[df["DBA Name"] == key, "Violations on Temperature Control and Cooking Practices"] = 1
+            df.loc[df["DBA Name"] == key, "Violations on Temperature and Special Procedures"] = 1
         if (v >= 30 and v <= 32) or (v >= 37 and v <= 42):
             df.loc[df["DBA Name"] == key, "Violations on Food Safety and Quality"] = 1
         if v >= 33 and v <= 36 or v >= 43 and v <= 49:
