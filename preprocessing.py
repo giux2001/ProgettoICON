@@ -105,34 +105,73 @@ def find_community_area(lat, lon):
     return None
 
 def joinDataset(food, health):
-    #food = pd.read_csv("dataset/Food_Inspections_preprocessed.csv")
-    #health = pd.read_csv("dataset/Public_Health_Statistics_preprocessed.csv")
-    #Rendi minuscole le stringhe della colonna Community Area Name
+    food = pd.read_csv("dataset/Food_Inspections_preprocessed.csv")
+    health = pd.read_csv("dataset/Public_Health_Statistics_preprocessed.csv")
     food["Community Area Name"] = food["Community Area Name"].str.lower()
     health["Community Area Name"] = health["Community Area Name"].str.lower()
     df = pd.merge(food, health, on="Community Area Name", how="inner")
     df = df.dropna()
+    df['Health Index'] = df.drop(columns=['Community Area Name','Assault (Homicide)','Firearm-related','Per Capita Income', 'Unemployment', 'Below Poverty Level', 'Crowded Housing', 'Inspection ID', 'DBA Name', 'Facility Type','Risk','Inspection Date','Results','Violations']).mean(axis=1)
+    df['Health Index'] = 100 - df['Health Index']
+    df = df.drop(columns=['Birth Rate', 'General Fertility Rate', 'Low Birth Weight', 'Prenatal Care Beginning in First Trimester', 'Preterm Births', 'Teen Birth Rate', 'Breast cancer in females', 'Cancer (All Sites)', 'Colorectal Cancer', 'Diabetes-related', 'Infant Mortality Rate', 'Lung Cancer', 'Prostate Cancer in Males', 'Stroke (Cerebrovascular Disease)', 'Tuberculosis'])
+    df['Crime Index'] = df[['Assault (Homicide)', 'Firearm-related']].mean(axis=1)
+    df = df.drop(columns=['Assault (Homicide)', 'Firearm-related'])
+    df = df.drop(columns=['Crowded Housing'])
     df.to_csv("dataset/Food_Inspections_and_Health_Statistics.csv", index=False)
 
-#Food = preprocesse_food_inspections()
-#Health = preprocesse_public_health_statistics()
-#joinDataset(Food, Health)
 
+def mapping_violations():
+    df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
+    diz = {}
+    #inizializza insieme vuoto
+    insieme = set()
+    pattern = r"\d+"
+    for i in range(len(df)):
+        numeri = re.findall(pattern, df["Violations"][i])
+        for j in numeri:
+            j = int(j)
+            insieme.add(j)
+        if insieme == set():
+            insieme.add(0)
+        diz[df["DBA Name"][i]] = insieme
+        insieme = set()
 
+    return diz
+
+d = mapping_violations()
 df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
-#df = df.drop(columns=['Gonorrhea in Males','Gonorrhea in Females', 'Childhood Blood Lead Level Screening', 'Childhood Lead Poisoning'])
-#calcola l'indice di salute in un'area
-#df['Health Index'] = df.drop(columns=['Community Area Name','Assault (Homicide)','Firearm-related','Per Capita Income', 'Unemployment', 'Below Poverty Level', 'Crowded Housing', 'Inspection ID', 'DBA Name', 'Facility Type','Risk','Inspection Date','Results','Violations']).mean(axis=1)
-#df['Health Index'] = 100 - df['Health Index']
-#df = df.drop(columns=['Birth Rate', 'General Fertility Rate', 'Low Birth Weight', 'Prenatal Care Beginning in First Trimester', 'Preterm Births', 'Teen Birth Rate', 'Breast cancer in females', 'Cancer (All Sites)', 'Colorectal Cancer', 'Diabetes-related', 'Infant Mortality Rate', 'Lung Cancer', 'Prostate Cancer in Males', 'Stroke (Cerebrovascular Disease)', 'Tuberculosis'])
-#df['Crime Index'] = df[['Assault (Homicide)', 'Firearm-related']].mean(axis=1)
-#df = df.drop(columns=['Assault (Homicide)', 'Firearm-related'])
-#df = df.drop(columns=['Crowded Housing'])
-#df.to_csv("Food_Inspections_and_Health_Statistics.csv", index=False)
-#media degli indici di salute
-print(df['Health Index'].mean())
-#media degli indici di criminalità
-print(df['Crime Index'].mean())
+#aggiungere alte colonne al dataframe
+df["No Violations"] = 0
+df["Violations on Management and Supervision"] = 0
+df["Violations on Hygiene and Food Security"] = 0
+df["Violations on Temperature and Special Procedures"] = 0
+df["Violations on Food Safety and Quality"] = 0
+df["Violations on Instrument storage and Maintenance"] = 0
+df["Violations on Facilities and regulations"] = 0
 
-
+#ciclare su chiavi e valori del dizionario
+i = 0
+for key, value in d.items():
+    print(i)
+    for v in value:
+        if v == 0:
+            df.loc[df["DBA Name"] == key, "No Violations"] = 1
+        if v >= 1 and v <= 10:
+            df.loc[df["DBA Name"] == key, "Violations on Management and Supervision"] = 1
+        if v >= 11 and v <= 17 or v >= 27 and v <= 28:
+            df.loc[df["DBA Name"] == key, "Violations on Hygiene and Food Security"] = 1
+        if v >= 11 and v <= 17:
+            df.loc[df["DBA Name"] == key, "Violations on Temperature and Special Procedures"] = 1
+        if (v >= 18 and v <= 26) or v == 29:
+            df.loc[df["DBA Name"] == key, "Violations on Temperature Control and Cooking Practices"] = 1
+        if (v >= 30 and v <= 32) or (v >= 37 and v <= 42):
+            df.loc[df["DBA Name"] == key, "Violations on Food Safety and Quality"] = 1
+        if v >= 33 and v <= 36 or v >= 43 and v <= 49:
+            df.loc[df["DBA Name"] == key, "Violations on Instrument storage and Maintenance"] = 1
+        if v >= 50 and v <= 63:
+            df.loc[df["DBA Name"] == key, "Violations on Facilities and regulations"] = 1
+    i = i + 1
  
+colonne_da_eliminare = ["Violations", "Inspection Date"]
+df.drop(colonne_da_eliminare, axis=1, inplace=True)
+df.to_csv("Food_Inspections_and_Health_Statistics.csv", index=False)
