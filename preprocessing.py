@@ -118,50 +118,21 @@ def joinDataset(food, health):
 #Health = preprocesse_public_health_statistics()
 #joinDataset(Food, Health)
 
-def save_Food_and_Health_in_KB():
-    df = pd.read_csv("dataset/Food_Inspections_and_Health_Statistics.csv")
-    #Definisci fatti per il dataset Food Inspections da salvare in facts.pl
-    prolog = Prolog()
 
-    for index, row in df.iterrows():
-        #Fatti per Food Inspections
-        inspection_id = f"inspection_id({row['Inspection ID']})"
-        inspections_facts = [f"facility_name({inspection_id}, '{row['DBA Name']}')",
-                             f"facility_type({inspection_id}, '{row['Facility Type']}')",
-                             f"risk({inspection_id}, {row['Risk']})",
-                             f"results({inspection_id}, {row['Results']})",
-                             f"violations({inspection_id}, {row['Violations']})",
-                             f"community_area({inspection_id}, '{row['Community Area Name']}')",
-                             f"inspection_date({inspection_id}, '{row['Inspection Date']}')"]
-                             
-        #Fatti per Community Area
-        community_area = f"community_area('{row['Community Area Name']}')"
-        community_area_facts = [f"inspection_in_community_area({inspection_id}, {community_area})",
-                                f"birth_rate({community_area}, {row['Birth Rate']})",
-                                f"general_fertility_rate({community_area}, {row['General Fertility Rate']})",
-                                f"low_birth_weight({community_area}, {row['Low Birth Weight']})",
-                                f"prenatal_care_beginning_in_first_trimester({community_area}, {row['Prenatal Care Beginning in First Trimester']})",
-                                f"premterme_births({community_area}, {row['Preterm Births']})",
-                                f"teen_birth_rate({community_area}, {row['Teen Birth Rate']})",
-                                f"assault({community_area}, {row['Assault (Homicide)']})",
-                                f"breast_cancer_in_females({community_area}, {row['Breast cancer in females']})",
-                                f"cancer_all_sites({community_area}, {row['Cancer (All Sites)']})",
-                                f"colorectal_cancer({community_area}, {row['Colorectal Cancer']})",
-                                f"diabetes_related({community_area}, {row['Diabetes-related']})",
-                                f"firearm_related({community_area}, {row['Firearm-related']})",
-                                f"infant_mortality_rate({community_area}, {row['Infant Mortality Rate']})",
-                                f"lung_cancer({community_area}, {row['Lung Cancer']})",
-                                f"prostate_cancer_in_males({community_area}, {row['Prostate Cancer in Males']})",
-                                f"stroke({community_area}, {row['Stroke (Cerebrovascular Disease)']})",
-                                f"childhood_poisoning({community_area}, {row['Childhood Lead Poisoning']})",
-                                f"gonorrhea_in_females({community_area}, {row['Gonorrhea in Females']})",
-                                f"gonorrhea_in_males({community_area}, {row['Gonorrhea in Males']})",
-                                f"tubercolosis({community_area}, {row['Tuberculosis']})",
-                                f"below_poverty_level({community_area}, {row['Below Poverty Level']})",
-                                f"crowded_housing({community_area}, {row['Crowded Housing']})",
-                                f"per_capita_income({community_area}, {row['Per Capita Income']})",
-                                f"unemployment({community_area}, {row['Unemployment']})"]
+df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
+#df = df.drop(columns=['Gonorrhea in Males','Gonorrhea in Females', 'Childhood Blood Lead Level Screening', 'Childhood Lead Poisoning'])
+#calcola l'indice di salute in un'area
+#df['Health Index'] = df.drop(columns=['Community Area Name','Assault (Homicide)','Firearm-related','Per Capita Income', 'Unemployment', 'Below Poverty Level', 'Crowded Housing', 'Inspection ID', 'DBA Name', 'Facility Type','Risk','Inspection Date','Results','Violations']).mean(axis=1)
+#df['Health Index'] = 100 - df['Health Index']
+#df = df.drop(columns=['Birth Rate', 'General Fertility Rate', 'Low Birth Weight', 'Prenatal Care Beginning in First Trimester', 'Preterm Births', 'Teen Birth Rate', 'Breast cancer in females', 'Cancer (All Sites)', 'Colorectal Cancer', 'Diabetes-related', 'Infant Mortality Rate', 'Lung Cancer', 'Prostate Cancer in Males', 'Stroke (Cerebrovascular Disease)', 'Tuberculosis'])
+#df['Crime Index'] = df[['Assault (Homicide)', 'Firearm-related']].mean(axis=1)
+#df = df.drop(columns=['Assault (Homicide)', 'Firearm-related'])
+#df = df.drop(columns=['Crowded Housing'])
+#df.to_csv("Food_Inspections_and_Health_Statistics.csv", index=False)
+#media degli indici di salute
+print(df['Health Index'].mean())
+#media degli indici di criminalità
+print(df['Crime Index'].mean())
 
 
-
-
+ 
