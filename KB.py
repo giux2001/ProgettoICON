@@ -129,13 +129,69 @@ def create_KB():
     prolog.assertz("high_economic_risk_area(CommunityArea) :-low_per_capita_income(CommunityArea),high_unemployment_rate(CommunityArea),high_below_poverty_level(CommunityArea)")
     #print(bool(list(prolog.query("high_economic_risk_area(community_area('near north side'))"))))
     
+    return prolog
 
+
+def calculate_features(kb, inspection_id, community_area):
     
-    
+    features = {}
+
+    features["INSPECTION_ID"] = inspection_id
+    features["COMMUNITY_AREA"] = community_area
+    features["DBA NAME"] = list(kb.query(f"facility_name(inspection_id({inspection_id}), DBAName)"))[0]["DBAName"]
+    features["FACILITY_TYPE"] = list(kb.query(f"facility_type(inspection_id({inspection_id}), FacilityType)"))[0]["FacilityType"]
+    features["RISK"] = list(kb.query(f"risk(inspection_id({inspection_id}), Risk)"))[0]["Risk"]
+    features["RESULTS"] = list(kb.query(f"results(inspection_id({inspection_id}), Results)"))[0]["Results"]
+    features["NO_VIOLATIONS"] = list(kb.query(f"no_violations(inspection_id({inspection_id}), NoViolations)"))[0]["NoViolations"]
+    features["VIOLATIONS_ON_MANAGEMENT_AND_SUPERVISION"] = list(kb.query(f"violations_on_management_and_supervision(inspection_id({inspection_id}), ViolationsOnManagementAndSupervision)"))[0]["ViolationsOnManagementAndSupervision"]
+    features["VIOLATIONS_ON_HYGIENE_AND_FOOD_SECURITY"] = list(kb.query(f"violations_on_hygiene_and_food_security(inspection_id({inspection_id}), ViolationsOnHygieneAndFoodSecurity)"))[0]["ViolationsOnHygieneAndFoodSecurity"]
+    features["VIOLATIONS_ON_TEMPERATURE_AND_SPECIAL_PROCEDURES"] = list(kb.query(f"violations_on_temperature_and_special_procedures(inspection_id({inspection_id}), ViolationsOnTemperatureAndSpecialProcedures)"))[0]["ViolationsOnTemperatureAndSpecialProcedures"]
+    features["VIOLATIONS_ON_FOOD_SAFETY_AND_QUALITY"] = list(kb.query(f"violations_on_food_safety_and_quality(inspection_id({inspection_id}), ViolationsOnFoodSafetyAndQuality)"))[0]["ViolationsOnFoodSafetyAndQuality"]
+    features["VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE"] = list(kb.query(f"violations_on_instrument_storage_and_maintenance(inspection_id({inspection_id}), ViolationsOnInstrumentStorageAndMaintenance)"))[0]["ViolationsOnInstrumentStorageAndMaintenance"]
+    features["VIOLATIONS_ON_FACILITIES_AND_REGULATIONS"] = list(kb.query(f"violations_on_facilities_and_regulations(inspection_id({inspection_id}), ViolationsOnFacilitiesAndRegulations)"))[0]["ViolationsOnFacilitiesAndRegulations"]
+    features["HAS_INSP_SERRIOUS_VIOL"] = query_boolean_result(kb, f"serious_violations(inspection_id({inspection_id}))")
+
+    features["COMMUNITY_AREA"] = community_area
+    features["NUM_INSP_AREA"] = list(kb.query(f"total_inspections_in_area(community_area('{community_area}'), Count)"))[0]["Count"]
+    features["PERC_INS_FAILED_AREA"] = list(kb.query(f"percentage_failed_inspections_in_area(community_area('{community_area}'), Percentage)"))[0]["Percentage"]
+    features["PERC_INS_PASSED_AREA"] = list(kb.query(f"percentage_passed_inspections_in_area(community_area('{community_area}'), Percentage)"))[0]["Percentage"]
+    features["PERC_INS_PASSED_COND_AREA"] = list(kb.query(f"percentage_passed_with_condition_inspections_in_area(community_area('{community_area}'), Percentage)"))[0]["Percentage"]
+    features["PERC_SERIOUS_VIOLATIONS_FAILED_AREA"] = list(kb.query(f"percentage_serious_violations_in_area(community_area('{community_area}'), Percentage)"))[0]["Percentage"]
+    features["IS_HIGH_CRIME_AREA"] = query_boolean_result(kb, f"high_crime_area(community_area('{community_area}'))")
+    features["IS_HIGH_RISK_AREA"] = query_boolean_result(kb, f"high_risk_area(community_area('{community_area}'))")
+    features["IS_LOW_HEALTH_AREA"] = query_boolean_result(kb, f"low_health_area(community_area('{community_area}'))")
+    features["IS_HIGH_BELOW_POVERTY_LEVEL"] = query_boolean_result(kb, f"high_below_poverty_level(community_area('{community_area}'))")
+    features["IS_LOW_PER_CAPITA_INCOME"] =  query_boolean_result(kb, f"low_per_capita_income(community_area('{community_area}'))")
+    features["IS_HIGH_UNEMPLOYMENT_RATE"] = query_boolean_result(kb, f"high_unemployment_rate(community_area('{community_area}'))")
+    features["IS_HIGH_ECONOMIC_RISK_AREA"] = query_boolean_result(kb, f"high_economic_risk_area(community_area('{community_area}'))")
+    features["AREA_BELOW_POVERTY_LEVEL"] = list(kb.query(f"below_poverty_level(community_area('{community_area}'), BelowPovertyLevel)"))[0]["BelowPovertyLevel"]
+    features["AREA_PER_CAPITA_INCOME"] = list(kb.query(f"per_capita_income(community_area('{community_area}'), PerCapitaIncome)"))[0]["PerCapitaIncome"]
+    features["AREA_UNEMPLOYMENT"] = list(kb.query(f"unemployment(community_area('{community_area}'), Unemployment)"))[0]["Unemployment"]
+    features["AREA_CRIME_INDEX"] = list(kb.query(f"crime_index(community_area('{community_area}'), CrimeIndex)"))[0]["CrimeIndex"]
+    features["AREA_HEALTH_INDEX"] = list(kb.query(f"health_index(community_area('{community_area}'), HealthIndex)"))[0]["HealthIndex"]
+
+    return features
+
+def query_boolean_result(kb, query_str: str):
+    return min(len(list(kb.query(query_str))), 1)
+
+def produce_working_dataset(kb):
+    df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
+
+    first = True
+    i = 0
+    for inspection_id, community_area in zip(df["Inspection ID"], df["Community Area Name"]):
+        print(f"Processing inspection {i}")
+        features = calculate_features(kb, inspection_id, community_area)
+        if first:
+            working_df = pd.DataFrame([features])
+            first = False
+        else:
+            working_df = pd.concat([working_df, pd.DataFrame([features])], ignore_index=True)
+        i += 1
+
+    working_df.to_csv("Working_Dataset.csv", index=False)
 
 
-
-
-    
-
-create_KB()
+kb = create_KB()
+produce_working_dataset(kb)
