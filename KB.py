@@ -132,12 +132,11 @@ def create_KB():
     return prolog
 
 
-def calculate_features(kb, inspection_id, community_area):
+def calculate_features_inspection_id(kb, inspection_id):
     
     features = {}
 
     features["INSPECTION_ID"] = inspection_id
-    features["COMMUNITY_AREA"] = community_area
     features["DBA NAME"] = list(kb.query(f"facility_name(inspection_id({inspection_id}), DBAName)"))[0]["DBAName"]
     features["FACILITY_TYPE"] = list(kb.query(f"facility_type(inspection_id({inspection_id}), FacilityType)"))[0]["FacilityType"]
     features["RISK"] = list(kb.query(f"risk(inspection_id({inspection_id}), Risk)"))[0]["Risk"]
@@ -150,6 +149,13 @@ def calculate_features(kb, inspection_id, community_area):
     features["VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE"] = list(kb.query(f"violations_on_instrument_storage_and_maintenance(inspection_id({inspection_id}), ViolationsOnInstrumentStorageAndMaintenance)"))[0]["ViolationsOnInstrumentStorageAndMaintenance"]
     features["VIOLATIONS_ON_FACILITIES_AND_REGULATIONS"] = list(kb.query(f"violations_on_facilities_and_regulations(inspection_id({inspection_id}), ViolationsOnFacilitiesAndRegulations)"))[0]["ViolationsOnFacilitiesAndRegulations"]
     features["HAS_INSP_SERRIOUS_VIOL"] = query_boolean_result(kb, f"serious_violations(inspection_id({inspection_id}))")
+    features["COMMUNITY_AREA"] = list(kb.query(f"community_area(inspection_id({inspection_id}), CommunityArea)"))[0]["CommunityArea"]
+
+    return features
+
+def calculate_features_community_area(kb, community_area):
+
+    features = {}
 
     features["COMMUNITY_AREA"] = community_area
     features["NUM_INSP_AREA"] = list(kb.query(f"total_inspections_in_area(community_area('{community_area}'), Count)"))[0]["Count"]
@@ -178,11 +184,13 @@ def query_boolean_result(kb, query_str: str):
 def produce_working_dataset(kb):
     df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
 
+    print("Calculating features for inspections...")
+
     first = True
     i = 0
-    for inspection_id, community_area in zip(df["Inspection ID"], df["Community Area Name"]):
+    for inspection_id in df["Inspection ID"]:
         print(f"Processing inspection {i}")
-        features = calculate_features(kb, inspection_id, community_area)
+        features = calculate_features_inspection_id(kb, inspection_id)
         if first:
             working_df = pd.DataFrame([features])
             first = False
@@ -190,8 +198,23 @@ def produce_working_dataset(kb):
             working_df = pd.concat([working_df, pd.DataFrame([features])], ignore_index=True)
         i += 1
 
-    working_df.to_csv("Working_Dataset.csv", index=False)
+    working_df.to_csv("Inspections.csv", index=False)
 
+    print("Calculating features for community areas...")
+    insieme_community_area = set(df["Community Area Name"])
+    first = True
+    i = 0
+    for community_area in insieme_community_area:
+        print(f"Processing community area {i}")
+        features = calculate_features_community_area(kb, community_area)
+        if first:
+            working_df = pd.DataFrame([features])
+            first = False
+        else:
+            working_df = pd.concat([working_df, pd.DataFrame([features])], ignore_index=True)
+        i += 1
+
+    working_df.to_csv("Community_Areas.csv", index=False)
 
 kb = create_KB()
 produce_working_dataset(kb)
