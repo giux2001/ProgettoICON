@@ -169,7 +169,7 @@ def calculate_features_community_area(kb, community_area):
     features["IS_HIGH_BELOW_POVERTY_LEVEL"] = query_boolean_result(kb, f"high_below_poverty_level(community_area('{community_area}'))")
     features["IS_LOW_PER_CAPITA_INCOME"] =  query_boolean_result(kb, f"low_per_capita_income(community_area('{community_area}'))")
     features["IS_HIGH_UNEMPLOYMENT_RATE"] = query_boolean_result(kb, f"high_unemployment_rate(community_area('{community_area}'))")
-    features["IS_HIGH_ECONOMIC_RISK_AREA"] = query_boolean_result(kb, f"high_economic_risk_area(community_area('{community_area}'))")
+    #features["IS_HIGH_ECONOMIC_RISK_AREA"] = query_boolean_result(kb, f"high_economic_risk_area(community_area('{community_area}'))")
     features["AREA_BELOW_POVERTY_LEVEL"] = list(kb.query(f"below_poverty_level(community_area('{community_area}'), BelowPovertyLevel)"))[0]["BelowPovertyLevel"]
     features["AREA_PER_CAPITA_INCOME"] = list(kb.query(f"per_capita_income(community_area('{community_area}'), PerCapitaIncome)"))[0]["PerCapitaIncome"]
     features["AREA_UNEMPLOYMENT"] = list(kb.query(f"unemployment(community_area('{community_area}'), Unemployment)"))[0]["Unemployment"]
@@ -215,6 +215,12 @@ def produce_working_dataset(kb):
         i += 1
 
     working_df.to_csv("Community_Areas.csv", index=False)
+
+    df1 = pd.read_csv("Community_Areas.csv")
+    df2 = pd.read_csv("Inspections.csv")
+    #Join tra i due dataset su COMMUNITY_AREA
+    df = pd.merge(df2, df1, on='COMMUNITY_AREA')
+    df.to_csv("Working_Dataset.csv", index=False)
 
 kb = create_KB()
 produce_working_dataset(kb)
