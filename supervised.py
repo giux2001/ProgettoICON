@@ -387,6 +387,8 @@ def main():
     training_GradientBoosting_on_maxdepth(X, y, best_params_gb)
     training_GradientBoosting_on_n_estimators(X, y, best_params_gb)
 
+    # Naive Bayes
+    Naive_Bayes()
 
 def Naive_Bayes():
     model = CategoricalNB()
@@ -405,10 +407,16 @@ def Naive_Bayes():
     }
     results = cross_validate(model, X, y, cv=kf, scoring=scoring)
 
-    print(f"Accuracy: {results['test_accuracy'].mean()} ± {results['test_accuracy'].std()}")
-    print(f"F1 Score: {results['test_f1'].mean()} ± {results['test_f1'].std()}")
-    print(f"Precision: {results['test_precision'].mean()} ± {results['test_precision'].std()}")
-    print(f"Recall: {results['test_recall'].mean()} ± {results['test_recall'].std()}")
+    print(f"Accuracy: {results['test_accuracy'].mean()}")
+    print(f"F1 Score: {results['test_f1'].mean()}")
+    print(f"Precision: {results['test_precision'].mean()}")
+    print(f"Recall: {results['test_recall'].mean()}")
+
+    #salvataggio su file
+    with open('NaiveBayesTraining.txt', 'w') as f:
+        f.write(f"Accuracy: {results['test_accuracy'].mean()}\n")
+        f.write(f"F1 Score: {results['test_f1'].mean()}\n")
+        f.write(f"Precision: {results['test_precision'].mean()}\n")
+        f.write(f"Recall: {results['test_recall'].mean()}\n")
 
 main()
-#Naive_Bayes()

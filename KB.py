@@ -62,72 +62,106 @@ def create_KB():
     #Clausola per trovare il numero di ispezioni in un'area
     prolog.assertz("total_inspections_in_area(CommunityArea, Count) :-findall(InspectionID, inspection_in_community_area(InspectionID, CommunityArea), Inspections),length(Inspections, Count)")
     #print(list(prolog.query("total_inspections_in_area(community_area('albany park'), Count)")))
+
     #Clausola per trovare il numero di ispezioni fallite in un'area
     prolog.assertz("failed_inspections_in_area(CommunityArea, Count) :-findall(InspectionID, (inspection_in_community_area(InspectionID, CommunityArea), results(InspectionID, 0)), FailedInspections),length(FailedInspections, Count)")
     #print(list(prolog.query("failed_inspections_in_area(community_area('albany park'), Count)")))
+
     #Clausola per trovare la percentuale di ispezioni fallite in un'area
     prolog.assertz("percentage_failed_inspections_in_area(CommunityArea, Percentage) :-total_inspections_in_area(CommunityArea, TotalCount),failed_inspections_in_area(CommunityArea, FailedCount),TotalCount > 0, Percentage is (FailedCount / TotalCount) * 100")
     #print(list(prolog.query("percentage_failed_inspections_in_area(community_area('albany park'), Percentage)")))
+
     #Clausola per trovare il numero di ispezioni passate in un'area
     prolog.assertz("passed_inspections_in_area(CommunityArea, Count) :-findall(InspectionID, (inspection_in_community_area(InspectionID, CommunityArea), results(InspectionID, 1)), PassedInspections),length(PassedInspections, Count)")
     #print(list(prolog.query("passed_inspections_in_area(community_area('albany park'), Count)")))
+
     #Clausola per trovare la percentuale di ispezioni passate in un'area
     prolog.assertz("percentage_passed_inspections_in_area(CommunityArea, Percentage) :-total_inspections_in_area(CommunityArea, TotalCount),passed_inspections_in_area(CommunityArea, PassedCount),TotalCount > 0, Percentage is (PassedCount / TotalCount) * 100")
     #print(list(prolog.query("percentage_passed_inspections_in_area(community_area('albany park'), Percentage)")))
+
     #Clausola per trovare il numero di ispezioni passate con condizione in un'area
     prolog.assertz("passed_with_condition_inspections_in_area(CommunityArea, Count) :-findall(InspectionID, (inspection_in_community_area(InspectionID, CommunityArea), results(InspectionID, 2)), PassedWithConditionInspections),length(PassedWithConditionInspections, Count)")
     #print(list(prolog.query("passed_with_condition_inspections_in_area(community_area('albany park'), Count)")))
+
     #Clausola per trovare la percentuale di ispezioni passate con condizione in un'area
     prolog.assertz("percentage_passed_with_condition_inspections_in_area(CommunityArea, Percentage) :-total_inspections_in_area(CommunityArea, TotalCount),passed_with_condition_inspections_in_area(CommunityArea, PassedWithConditionCount),TotalCount > 0, Percentage is (PassedWithConditionCount / TotalCount) * 100")
     #print(list(prolog.query("percentage_passed_with_condition_inspections_in_area(community_area('albany park'), Percentage)")))
+
     #Clausola per determinare se una struttura ha avuto come risultato pass e non ha violazioni
     prolog.assertz("passed_no_violations(InspectionID) :-results(InspectionID, 1),no_violations(InspectionID, 1)")
     #print(bool(list(prolog.query("passed_no_violations(inspection_id(2370179))"))))
+
     #Clausola per determinare se una struttura ha avuto almeno una violazione,considerata grave, o tra quelle di management e supervision, o igiene e sicurezza alimentare, o temperatura e procedure speciali
     prolog.assertz("serious_violations(InspectionID) :-violations_on_management_and_supervision(InspectionID, Count),Count > 0;violations_on_hygiene_and_food_security(InspectionID, Count),Count > 0;violations_on_temperature_and_special_procedures(InspectionID, Count),Count > 0")
     #print(bool(list(prolog.query("serious_violations(inspection_id(2370179))"))))
+
     #Clausola per determinare il numero di struttura con violazioni serie in un'area e che non hanno passato l'ispezione
     prolog.assertz("serious_violations_in_area(CommunityArea, Count) :-findall(InspectionID, (inspection_in_community_area(InspectionID, CommunityArea),serious_violations(InspectionID),results(InspectionID, 0)), SeriousViolations),length(SeriousViolations, Count)")
     #print(list(prolog.query("serious_violations_in_area(community_area('near west side'), Count)")))
+
     #Clausola per determinare la percentuale di strutture con violazioni serie in un'area e che non hanno passato l'ispezione
     prolog.assertz("percentage_serious_violations_in_area(CommunityArea, Percentage) :-total_inspections_in_area(CommunityArea, TotalCount),serious_violations_in_area(CommunityArea, SeriousViolationsCount),TotalCount > 0, Percentage is (SeriousViolationsCount / TotalCount) * 100")
     #print(list(prolog.query("percentage_serious_violations_in_area(community_area('near west side'), Percentage)")))
+
     #Clausola per determinare la media del crime index
-    prolog.assertz("average_crime_index(Average) :-findall(CrimeIndex, crime_index(_, CrimeIndex), CrimeIndexes),sum_list(CrimeIndexes, Sum),length(CrimeIndexes, Count),Average is Sum / Count")
+    prolog.assertz("average_crime_index(Average) :-findall(CrimeIndex, crime_index(_, CrimeIndex), CrimeIndexes),sum_list(CrimeIndexes, Sum),length(CrimeIndexes, Count), Average is Sum / Count")
     #print(list(prolog.query("average_crime_index(Average)")))
-    #Clausola per determinare se un'area ha un crime index superiore alla media
-    prolog.assertz("high_crime_area(CommunityArea) :-crime_index(CommunityArea, CrimeIndex),average_crime_index(Average),CrimeIndex > Average")
+
+    # Clausola per calcolare la deviazione standard del crime index
+    prolog.assertz("std_dev_crime_index(StdDev) :- findall(CrimeIndex, crime_index(_, CrimeIndex), CrimeIndexes), average_crime_index(Average), maplist([X,Y]>>(Y is (X-Average)*(X-Average)), CrimeIndexes, SquaredDiffs), sum_list(SquaredDiffs, Sum), length(CrimeIndexes, Count), StdDev is sqrt(Sum / Count)")
+    #print(list(prolog.query("std_dev_crime_index(StdDev)")))
+    
+    #Clausola per determinare se un'area ha un crime index superiore alla media + 1 deviazione standard
+    prolog.assertz("high_crime_area(CommunityArea) :-crime_index(CommunityArea, CrimeIndex),average_crime_index(Average),std_dev_crime_index(StdDev),CrimeIndex > Average + StdDev")
     #print(bool(list(prolog.query("high_crime_area(community_area('burnside'))"))))
+
     #Clausola per determinare la media dell'health index
     prolog.assertz("average_health_index(Average) :-findall(HealthIndex, health_index(_, HealthIndex), HealthIndexes),sum_list(HealthIndexes, Sum),length(HealthIndexes, Count),Average is Sum / Count")
     #print(list(prolog.query("average_health_index(Average)")))
+
+    # Clausola per calcolare la deviazione standard dell'health index
+    prolog.assertz("std_dev_health_index(StdDev) :- findall(HealthIndex, health_index(_, HealthIndex), HealthIndexes), average_health_index(Average), maplist([X,Y]>>(Y is (X-Average)*(X-Average)), HealthIndexes, SquaredDiffs), sum_list(SquaredDiffs, Sum), length(HealthIndexes, Count), StdDev is sqrt(Sum / Count)")
+    #print(list(prolog.query("std_dev_health_index(StdDev)")))
+
     #Clausola per determinare se un'area ha un health index inferiore alla media
-    prolog.assertz("low_health_area(CommunityArea) :-health_index(CommunityArea, HealthIndex),average_health_index(Average),HealthIndex < Average")
+    prolog.assertz("low_health_area(CommunityArea) :-health_index(CommunityArea, HealthIndex),average_health_index(Average),std_dev_health_index(StdDev),HealthIndex < Average - StdDev")
     #print(bool(list(prolog.query("low_health_area(community_area('burnside'))"))))
-    #Clausola per determinare se un'area è ad alto rischio sulla base dell'health index e del crime index
-    prolog.assertz("high_risk_area(CommunityArea) :-high_crime_area(CommunityArea),low_health_area(CommunityArea)")
-    #print(bool(list(prolog.query("high_risk_area(community_area('greater grand crossing'))"))))
+
     #Clausola per determinare la media del below poverty level
     prolog.assertz("average_below_poverty_level(Average) :-findall(BelowPovertyLevel, below_poverty_level(_, BelowPovertyLevel), BelowPovertyLevels),sum_list(BelowPovertyLevels, Sum),length(BelowPovertyLevels, Count),Average is Sum / Count")
     #print(list(prolog.query("average_below_poverty_level(Average)")))
+
+    #Clausola per determinare la deviazione standard del below poverty level
+    prolog.assertz("std_dev_below_poverty_level(StdDev) :-findall(BelowPovertyLevel, below_poverty_level(_, BelowPovertyLevel), BelowPovertyLevels),average_below_poverty_level(Average),maplist([X,Y]>>(Y is (X-Average)*(X-Average)),BelowPovertyLevels,SquaredDiffs),sum_list(SquaredDiffs,Sum),length(BelowPovertyLevels,Count),StdDev is sqrt(Sum / Count)")
+    #print(list(prolog.query("std_dev_below_poverty_level(StdDev)")))
+
     #Clausola per determinare se un'area ha un below poverty level superiore alla media
-    prolog.assertz("high_below_poverty_level(CommunityArea) :-below_poverty_level(CommunityArea, BelowPovertyLevel),average_below_poverty_level(Average),BelowPovertyLevel > Average")
+    prolog.assertz("high_below_poverty_level(CommunityArea) :-below_poverty_level(CommunityArea, BelowPovertyLevel),average_below_poverty_level(Average),std_dev_below_poverty_level(StdDev),BelowPovertyLevel > Average + StdDev")
     #print(bool(list(prolog.query("high_below_poverty_level(community_area('near south side'))"))))
+
     #Clausola per determinare la media del per capita income
     prolog.assertz("average_per_capita_income(Average) :-findall(PerCapitaIncome, per_capita_income(_, PerCapitaIncome), PerCapitaIncomes),sum_list(PerCapitaIncomes, Sum),length(PerCapitaIncomes, Count),Average is Sum / Count")
     #print(list(prolog.query("average_per_capita_income(Average)")))
+
+    #Clausola per determinare la deviazione standard del per capita income
+    prolog.assertz("std_dev_per_capita_income(StdDev) :-findall(PerCapitaIncome, per_capita_income(_, PerCapitaIncome), PerCapitaIncomes),average_per_capita_income(Average),maplist([X,Y]>>(Y is (X-Average)*(X-Average)),PerCapitaIncomes,SquaredDiffs),sum_list(SquaredDiffs,Sum),length(PerCapitaIncomes,Count),StdDev is sqrt(Sum / Count)")
+    #print(list(prolog.query("std_dev_per_capita_income(StdDev)")))
+
     #Clausola per determinare se un'area ha un per capita income inferiore alla media
-    prolog.assertz("low_per_capita_income(CommunityArea) :-per_capita_income(CommunityArea, PerCapitaIncome),average_per_capita_income(Average),PerCapitaIncome < Average")
+    prolog.assertz("low_per_capita_income(CommunityArea) :-per_capita_income(CommunityArea, PerCapitaIncome),average_per_capita_income(Average),std_dev_per_capita_income(StdDev),PerCapitaIncome < Average - StdDev")
     #print(bool(list(prolog.query("low_per_capita_income(community_area('burnside'))"))))
-    #Clausola per determinare la media della disoccupazione
+
+    #Clausola per determinare la media della disoccupazione0
     prolog.assertz("average_unemployment_rate(Average) :-findall(UnemploymentRate, unemployment(_, UnemploymentRate), UnemploymentRates),sum_list(UnemploymentRates, Sum),length(UnemploymentRates, Count),Average is Sum / Count")
     #print(list(prolog.query("average_unemployment_rate(Average)")))
+
+    #Clausola per determinare la deviazione standard della disoccupazione
+    prolog.assertz("std_dev_unemployment_rate(StdDev) :-findall(UnemploymentRate, unemployment(_, UnemploymentRate), UnemploymentRates),average_unemployment_rate(Average),maplist([X,Y]>>(Y is (X-Average)*(X-Average)),UnemploymentRates,SquaredDiffs),sum_list(SquaredDiffs,Sum),length(UnemploymentRates,Count),StdDev is sqrt(Sum / Count)")
+    #print(list(prolog.query("std_dev_unemployment_rate(StdDev)")))
+
     #Clausola per determinrre se un'area ha una disoccupazione superiore alla media
-    prolog.assertz("high_unemployment_rate(CommunityArea) :-unemployment(CommunityArea, UnemploymentRate),average_unemployment_rate(Average),UnemploymentRate > Average")
+    prolog.assertz("high_unemployment_rate(CommunityArea) :-unemployment(CommunityArea, UnemploymentRate),average_unemployment_rate(Average),std_dev_unemployment_rate(StdDev),UnemploymentRate > Average + StdDev")
     #print(bool(list(prolog.query("high_unemployment_rate(community_area('lake view'))"))))
-    #Clausola per determinare se una'area è alto rischio economico considerando se ha un reddito inferiore alla media, una disoccupazione superiore, e soglia di povertà superiore
-    prolog.assertz("high_economic_risk_area(CommunityArea) :-low_per_capita_income(CommunityArea),high_unemployment_rate(CommunityArea),high_below_poverty_level(CommunityArea)")
-    #print(bool(list(prolog.query("high_economic_risk_area(community_area('near north side'))"))))
     
     return prolog
 
@@ -148,7 +182,7 @@ def calculate_features_inspection_id(kb, inspection_id):
     features["VIOLATIONS_ON_FOOD_SAFETY_AND_QUALITY"] = list(kb.query(f"violations_on_food_safety_and_quality(inspection_id({inspection_id}), ViolationsOnFoodSafetyAndQuality)"))[0]["ViolationsOnFoodSafetyAndQuality"]
     features["VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE"] = list(kb.query(f"violations_on_instrument_storage_and_maintenance(inspection_id({inspection_id}), ViolationsOnInstrumentStorageAndMaintenance)"))[0]["ViolationsOnInstrumentStorageAndMaintenance"]
     features["VIOLATIONS_ON_FACILITIES_AND_REGULATIONS"] = list(kb.query(f"violations_on_facilities_and_regulations(inspection_id({inspection_id}), ViolationsOnFacilitiesAndRegulations)"))[0]["ViolationsOnFacilitiesAndRegulations"]
-    features["HAS_INSP_SERRIOUS_VIOL"] = query_boolean_result(kb, f"serious_violations(inspection_id({inspection_id}))")
+    features["HAS_INSP_SERIOUS_VIOL"] = query_boolean_result(kb, f"serious_violations(inspection_id({inspection_id}))")
     features["COMMUNITY_AREA"] = list(kb.query(f"community_area(inspection_id({inspection_id}), CommunityArea)"))[0]["CommunityArea"]
 
     return features
@@ -164,12 +198,10 @@ def calculate_features_community_area(kb, community_area):
     features["PERC_INS_PASSED_COND_AREA"] = list(kb.query(f"percentage_passed_with_condition_inspections_in_area(community_area('{community_area}'), Percentage)"))[0]["Percentage"]
     features["PERC_SERIOUS_VIOLATIONS_FAILED_AREA"] = list(kb.query(f"percentage_serious_violations_in_area(community_area('{community_area}'), Percentage)"))[0]["Percentage"]
     features["IS_HIGH_CRIME_AREA"] = query_boolean_result(kb, f"high_crime_area(community_area('{community_area}'))")
-    features["IS_HIGH_RISK_AREA"] = query_boolean_result(kb, f"high_risk_area(community_area('{community_area}'))")
     features["IS_LOW_HEALTH_AREA"] = query_boolean_result(kb, f"low_health_area(community_area('{community_area}'))")
     features["IS_HIGH_BELOW_POVERTY_LEVEL"] = query_boolean_result(kb, f"high_below_poverty_level(community_area('{community_area}'))")
     features["IS_LOW_PER_CAPITA_INCOME"] =  query_boolean_result(kb, f"low_per_capita_income(community_area('{community_area}'))")
     features["IS_HIGH_UNEMPLOYMENT_RATE"] = query_boolean_result(kb, f"high_unemployment_rate(community_area('{community_area}'))")
-    #features["IS_HIGH_ECONOMIC_RISK_AREA"] = query_boolean_result(kb, f"high_economic_risk_area(community_area('{community_area}'))")
     features["AREA_BELOW_POVERTY_LEVEL"] = list(kb.query(f"below_poverty_level(community_area('{community_area}'), BelowPovertyLevel)"))[0]["BelowPovertyLevel"]
     features["AREA_PER_CAPITA_INCOME"] = list(kb.query(f"per_capita_income(community_area('{community_area}'), PerCapitaIncome)"))[0]["PerCapitaIncome"]
     features["AREA_UNEMPLOYMENT"] = list(kb.query(f"unemployment(community_area('{community_area}'), Unemployment)"))[0]["Unemployment"]
