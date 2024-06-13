@@ -28,7 +28,7 @@ def create_Bayesian_Network():
     columns_of_interest = ['RESULTS', 'IS_HIGH_CRIME_AREA', 'IS_LOW_HEALTH_AREA', 'IS_HIGH_BELOW_POVERTY_LEVEL', 'IS_LOW_PER_CAPITA_INCOME', 'IS_HIGH_UNEMPLOYMENT_RATE']
     data_subset = data[columns_of_interest]
     #lambda per mappare i result 2 in 1
-    data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 1 if x == 2 else x)
+    #data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 1 if x == 2 else x)
     data_subset = balance_dataset(data_subset)
 
     # Stampa il numero di RESULTS per ogni valore
@@ -82,28 +82,28 @@ def query_BN(model):
     print(result)
 
     # Query con evidenza
-    evidence = {'IS_HIGH_CRIME_AREA': 1, 'IS_LOW_HEALTH_AREA': 0}
+    evidence = {'IS_HIGH_CRIME_AREA': 1, 'IS_LOW_HEALTH_AREA': 1}
     result_with_evidence = inference.query(variables=['RESULTS'], evidence=evidence)
     print("Risultato query con evidenza:")
     print(result_with_evidence)
 
-def generate_random_samples(model, n_samples=2):
-    samples = model.simulate(n_samples=n_samples).drop(columns=['RESULTS'])
+#funzione che effettua forward sampling per generare campioni casuali
+def forward_sampling(model, n_samples=10):
+    samples = model.simulate(n_samples=n_samples)
     print(f"{n_samples} campioni casuali generati:")
-    print(samples.head())
+    print(samples)
     return samples
 
-def predict_results(model, evidence):
+#funzione che calcola la probabilità a posteriori di una variabile data l'evidenza
+def posterior_probability(model, variable, evidence):
     inference = VariableElimination(model)
-    result = inference.map_query(variables=['RESULTS'], evidence=evidence)
-    print(f"Predizione di RESULTS data l'evidenza: \n{evidence}")
+    result = inference.query(variables=[variable], evidence=evidence)
+    print(f"Probabilità a posteriori di {variable} data l'evidenza: \n{evidence}")
     print(result)
-    return result
+    result = inference.map_query(variables=[variable], evidence=evidence)
+    print(result)
 
 model = create_Bayesian_Network()
-examples = generate_random_samples(model, n_samples=5)
-predict_results(model, evidence=examples.iloc[0])
-predict_results(model, evidence=examples.iloc[1])
-predict_results(model, evidence=examples.iloc[2])
-predict_results(model, evidence=examples.iloc[3])
-predict_results(model, evidence=examples.iloc[4])
+samples = forward_sampling(model, n_samples=1000)
+posterior_probability(model, 'RESULTS', samples.drop(columns=['RESULTS']).iloc[0])
+posterior_probability(model, 'RESULTS', samples.drop(columns=['RESULTS']).iloc[1])

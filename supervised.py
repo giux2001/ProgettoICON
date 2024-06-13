@@ -6,35 +6,45 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV, KFold
-from sklearn.metrics import make_scorer, accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import make_scorer, accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 from sklearn.naive_bayes import CategoricalNB
 import numpy as np
 import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTE
+import seaborn as sns
 
-def balance_dataset(data):
-    #Bilancia il dataset con SMOTE
-    smote = SMOTE(sampling_strategy='minority')
-    X = data.drop('RESULTS', axis=1)
-    y = data['RESULTS']
+from imblearn.over_sampling import SMOTE
+
+def balance_dataset(X, y):
+    # Calcola il numero di esempi in ciascuna classe
+    count_class_majority = y.value_counts()[1]  # Classe maggioritaria (pass)
+    count_class_minority = y.value_counts()[0]  # Classe minoritaria (fail)
+
+    # Calcola la sampling_strategy per una proporzione 60-40
+    sampling_strategy = (0.31 * count_class_majority) / count_class_minority
+
+    # Bilancia il dataset con SMOTE utilizzando la strategia calcolata
+    smote = SMOTE(sampling_strategy=sampling_strategy, random_state=42)
     X_resampled, y_resampled = smote.fit_resample(X, y)
-    data_resampled = pd.concat([X_resampled, y_resampled], axis=1)
-    return data_resampled
+    
+    return X_resampled, y_resampled
 
-def preprocess_data(only_categorical = False):
+def preprocess_data(balanced = True):
     df = pd.read_csv("Working_Dataset.csv")
     le = LabelEncoder()
     df['FACILITY_TYPE'] = le.fit_transform(df['FACILITY_TYPE'])
     df = df[df['NUM_INSP_AREA'] > 1]
     df['RESULTS'] = df['RESULTS'].apply(lambda x: 1 if x == 2 else x) 
-    if only_categorical:
-        X = df.drop(['INSPECTION_ID', 'DBA NAME', 'RESULTS', 'COMMUNITY_AREA', 'NUM_INSP_AREA','PERC_INS_FAILED_AREA','PERC_INS_PASSED_AREA','PERC_INS_PASSED_COND_AREA','PERC_SERIOUS_VIOLATIONS_FAILED_AREA','AREA_BELOW_POVERTY_LEVEL','AREA_PER_CAPITA_INCOME','AREA_UNEMPLOYMENT','AREA_CRIME_INDEX','AREA_HEALTH_INDEX'], axis=1)
-        y = df['RESULTS']
-    else:
-        X = df.drop(['INSPECTION_ID', 'DBA NAME', 'RESULTS', 'COMMUNITY_AREA'], axis=1)
-        y = df['RESULTS']
+    X = df.drop(['INSPECTION_ID', 'DBA NAME', 'RESULTS', 'COMMUNITY_AREA'], axis=1)
+    y = df['RESULTS']
 
-    return X, y
+    #splitta in train e test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    if balanced:
+        X_train, y_train = balance_dataset(X_train, y_train)
+
+    return X_train, y_train, X_test, y_test
 
 def search_best_hyperparameters(X_train, y_train, model_name):
     if model_name == 'RandomForest':
@@ -73,11 +83,10 @@ def search_best_hyperparameters(X_train, y_train, model_name):
     pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
     grid = GridSearchCV(pipe, hyperparameters, cv=5)
     grid.fit(X_train, y_train)
-
-    print("Best hyperparameters found: ", grid.best_params_)
+    
     return grid.best_params_
 
-def training_randomforest_on_maxdepth(X, y, best_params):
+def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params):
 
     max_depth_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -101,37 +110,43 @@ def training_randomforest_on_maxdepth(X, y, best_params):
         'precision': make_scorer(precision_score),
         'recall': make_scorer(recall_score)
         }
-        results = cross_validate(pipe, X, y, cv=kf, scoring=scoring)
+        results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
         accuracy_scores.append(results['test_accuracy'].mean())
         f1_scores.append(results['test_f1'].mean())
         precision_scores.append(results['test_precision'].mean())
         recall_scores.append(results['test_recall'].mean())
-        print(f"Max Depth: {max_depth}")
-        print(f"Accuracy: {results['test_accuracy'].mean()}")
-        print(f"F1 Score: {results['test_f1'].mean()}")
-        print(f"Precision: {results['test_precision'].mean()}")
-        print(f"Recall: {results['test_recall'].mean()}")
 
-    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth')
+    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Balanced')
 
+    #convertire in numpy array per usare argmax
     accuracy_scores = np.array(accuracy_scores)
-    f1_scores = np.array(f1_scores)
-    precision_scores = np.array(precision_scores)
-    recall_scores = np.array(recall_scores)
+    best_accuracy = accuracy_scores.argmax()
 
-    print(f"Accuracy: {accuracy_scores.mean()}")
-    print(f"F1 Score: {f1_scores.mean()}")
-    print(f"Precision: {precision_scores.mean()}")
-    print(f"Recall: {recall_scores.mean()}")
+    model = RandomForestClassifier(
+            criterion=best_params['model__criterion'],
+            min_samples_split=best_params['model__min_samples_split'],
+            min_samples_leaf=best_params['model__min_samples_leaf'],
+            max_depth=max_depth_values[best_accuracy])
+    
+    pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+    pipe.fit(X_train, y_train)
+    y_pred = pipe.predict(X_test)
+
+    plot_confusion_matrix(y_test, y_pred, 'RandomForestMaxDepth')
+
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
 
     #salvataggio su file
-    with open('RandomForestTrainingDepth.txt', 'w') as f:
-        f.write(f"Accuracy: {accuracy_scores.mean()}\n")
-        f.write(f"F1 Score: {f1_scores.mean()}\n")
-        f.write(f"Precision: {precision_scores.mean()}\n")
-        f.write(f"Recall: {recall_scores.mean()}\n")
+    with open('RandomForestBestDepthBalanced.txt', 'w') as f:
+        f.write(f"Accuracy: {accuracy}\n")
+        f.write(f"F1 Score: {f1}\n")
+        f.write(f"Precision: {precision}\n")
+        f.write(f"Recall: {recall}\n")
 
-def training_randomforest_on_n_estimators(X, y, best_params):
+def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params):
     
         n_estimators_values = [10, 20, 50, 100, 200, 500, 1000]
     
@@ -155,32 +170,43 @@ def training_randomforest_on_n_estimators(X, y, best_params):
             'precision': make_scorer(precision_score),
             'recall': make_scorer(recall_score)
             }
-            results = cross_validate(pipe, X, y, cv=kf, scoring=scoring)
+            results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
             accuracy_scores.append(results['test_accuracy'].mean())
             f1_scores.append(results['test_f1'].mean())
             precision_scores.append(results['test_precision'].mean())
             recall_scores.append(results['test_recall'].mean())
 
-        plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators')
+        plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Balanced')
 
         accuracy_scores = np.array(accuracy_scores)
-        f1_scores = np.array(f1_scores)
-        precision_scores = np.array(precision_scores)
-        recall_scores = np.array(recall_scores)
-    
-        print(f"Accuracy: {accuracy_scores.mean()}")
-        print(f"F1 Score: {f1_scores.mean()}")
-        print(f"Precision: {precision_scores.mean()}")
-        print(f"Recall: {recall_scores.mean()}")
-    
-        #salvataggio su file
-        with open('RandomForestTrainingEstimators.txt', 'w') as f:
-            f.write(f"Accuracy: {accuracy_scores.mean()}\n")
-            f.write(f"F1 Score: {f1_scores.mean()}\n")
-            f.write(f"Precision: {precision_scores.mean()}\n")
-            f.write(f"Recall: {recall_scores.mean()}\n")
+        best_accuracy = accuracy_scores.argmax()
 
-def training_DecisionTree(X, y, best_params):
+        model = RandomForestClassifier(
+                criterion=best_params['model__criterion'],
+                min_samples_split=best_params['model__min_samples_split'],
+                min_samples_leaf=best_params['model__min_samples_leaf'],
+                n_estimators=n_estimators_values[best_accuracy]
+            )
+        
+        pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+        pipe.fit(X_train, y_train)
+        y_pred = pipe.predict(X_test)
+
+        plot_confusion_matrix(y_test, y_pred, 'RandomForestEstimators')
+
+        accuracy = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
+
+        #salvataggio su file
+        with open('RandomForestBestEstimatorsBalanced.txt', 'w') as f:
+            f.write(f"Accuracy: {accuracy}\n")
+            f.write(f"F1 Score: {f1}\n")
+            f.write(f"Precision: {precision}\n")
+            f.write(f"Recall: {recall}\n")
+
+def training_DecisionTree(X_train, y_train, X_test, y_test, best_params):
     
         max_depth_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     
@@ -204,61 +230,74 @@ def training_DecisionTree(X, y, best_params):
             'precision': make_scorer(precision_score),
             'recall': make_scorer(recall_score)
             }
-            results = cross_validate(pipe, X, y, cv=kf, scoring=scoring)
+            results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
+
             accuracy_scores.append(results['test_accuracy'].mean())
             f1_scores.append(results['test_f1'].mean())
             precision_scores.append(results['test_precision'].mean())
             recall_scores.append(results['test_recall'].mean())
 
-        plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree')
-    
-        accuracy_scores = np.array(accuracy_scores)
-        f1_scores = np.array(f1_scores)
-        precision_scores = np.array(precision_scores)
-        recall_scores = np.array(recall_scores)
+        plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Balanced')
+        
 
-    
-        print(f"Accuracy: {accuracy_scores.mean()}")
-        print(f"F1 Score: {f1_scores.mean()}")
-        print(f"Precision: {precision_scores.mean()}")
-        print(f"Recall: {recall_scores.mean()}")
+        accuracy_scores = np.array(accuracy_scores)
+        best_accuracy = accuracy_scores.argmax()
+
+        model = DecisionTreeClassifier(
+                criterion=best_params['model__criterion'],
+                min_samples_split=best_params['model__min_samples_split'],
+                min_samples_leaf=best_params['model__min_samples_leaf'],
+                max_depth=max_depth_values[best_accuracy]
+            )
+        
+        pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+        pipe.fit(X_train, y_train)
+        y_pred = pipe.predict(X_test)
+
+        plot_confusion_matrix(y_test, y_pred, 'DecisionTree')
+
+
+        accuracy = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
 
         #salvataggio su file
-        with open('DecisionTreeTrainingDepth.txt', 'w') as f:
-            f.write(f"Accuracy: {accuracy_scores.mean()}\n")
-            f.write(f"F1 Score: {f1_scores.mean()}\n")
-            f.write(f"Precision: {precision_scores.mean()}\n")
-            f.write(f"Recall: {recall_scores.mean()}\n")
+        with open('DecisionTreeBestDepthBalanced.txt', 'w') as f:
+            f.write(f"Accuracy: {accuracy}\n")
+            f.write(f"F1 Score: {f1}\n")
+            f.write(f"Precision: {precision}\n")
+            f.write(f"Recall: {recall}\n")
+        
 
-def training_LogisticRegression(X, y, best_params):
+def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params):
     model = LogisticRegression(
         penalty=best_params['model__penalty'],
         C=best_params['model__C'],
         solver=best_params['model__solver'],
         max_iter=best_params['model__max_iter']
     )
+
     pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
-    scoring = {
-        'accuracy': make_scorer(accuracy_score),
-        'f1': make_scorer(f1_score),
-        'precision': make_scorer(precision_score),
-        'recall': make_scorer(recall_score)
-    }
-    results = cross_validate(pipe, X, y, cv=kf, scoring=scoring)
+    pipe.fit(X_train, y_train)
+    y_pred = pipe.predict(X_test)
 
-    print(f"Accuracy: {results['test_accuracy'].mean()}")
-    print(f"F1 Score: {results['test_f1'].mean()}")
-    print(f"Precision: {results['test_precision'].mean()}")
-    print(f"Recall: {results['test_recall'].mean()}")
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+
+    #matrice di confusione
+    plot_confusion_matrix(y_test, y_pred, 'LogisticRegression')
+
     #salvataggio su file
-    with open('LogisticRegressionTraining.txt', 'w') as f:
-        f.write(f"Accuracy: {results['test_accuracy'].mean()}\n")
-        f.write(f"F1 Score: {results['test_f1'].mean()}\n")
-        f.write(f"Precision: {results['test_precision'].mean()}\n")
-        f.write(f"Recall: {results['test_recall'].mean()}\n")
+    with open('LogisticRegressionBalanced.txt', 'w') as f:
+        f.write(f"Accuracy: {accuracy}\n")
+        f.write(f"F1 Score: {f1}\n")
+        f.write(f"Precision: {precision}\n")
+        f.write(f"Recall: {recall}\n")
 
-def training_GradientBoosting_on_maxdepth(X, y, best_params):
+def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params):
         
             max_depth_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         
@@ -283,32 +322,48 @@ def training_GradientBoosting_on_maxdepth(X, y, best_params):
                 'precision': make_scorer(precision_score),
                 'recall': make_scorer(recall_score)
                 }
-                results = cross_validate(pipe, X, y, cv=kf, scoring=scoring)
+                results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
                 accuracy_scores.append(results['test_accuracy'].mean())
                 f1_scores.append(results['test_f1'].mean())
                 precision_scores.append(results['test_precision'].mean())
                 recall_scores.append(results['test_recall'].mean())
 
-            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth')
-        
-            accuracy_scores = np.array(accuracy_scores)
-            f1_scores = np.array(f1_scores)
-            precision_scores = np.array(precision_scores)
-            recall_scores = np.array(recall_scores)
-        
-            print(f"Accuracy: {accuracy_scores.mean()}")
-            print(f"F1 Score: {f1_scores.mean()}")
-            print(f"Precision: {precision_scores.mean()}")
-            print(f"Recall: {recall_scores.mean()}")
-        
-            #salvataggio su file
-            with open('GradientBoostingTrainingDepth.txt', 'w') as f:
-                f.write(f"Accuracy: {accuracy_scores.mean()}\n")
-                f.write(f"F1 Score: {f1_scores.mean()}\n")
-                f.write(f"Precision: {precision_scores.mean()}\n")
-                f.write(f"Recall: {recall_scores.mean()}\n")
+            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Balanced')
 
-def training_GradientBoosting_on_n_estimators(X, y, best_params):
+            accuracy_scores = np.array(accuracy_scores)
+            best_acc = accuracy_scores.argmax()
+
+            model = GradientBoostingClassifier(
+                    loss=best_params['model__loss'],
+                    learning_rate=best_params['model__learning_rate'],
+                    max_depth=max_depth_values[best_acc],
+                    min_samples_split=best_params['model__min_samples_split'],
+                    min_samples_leaf=best_params['model__min_samples_leaf']
+                )
+            
+            pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+            pipe.fit(X_train, y_train)
+
+            y_pred = pipe.predict(X_test)
+
+            plot_confusion_matrix(y_test, y_pred, 'GradientBoostingMaxDepth')
+
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred)
+            precision = precision_score(y_test, y_pred)
+            recall = recall_score(y_test, y_pred)
+
+            #salvataggio su file
+            with open('GradientBoostingBestDepthBalanced.txt', 'w') as f:
+                f.write(f"Accuracy: {accuracy}\n")
+                f.write(f"F1 Score: {f1}\n")
+                f.write(f"Precision: {precision}\n")
+                f.write(f"Recall: {recall}\n")
+            
+
+
+
+def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params):
         
             n_estimators_values = [10, 20, 50, 100, 200, 500, 1000]
         
@@ -333,30 +388,43 @@ def training_GradientBoosting_on_n_estimators(X, y, best_params):
                 'precision': make_scorer(precision_score),
                 'recall': make_scorer(recall_score)
                 }
-                results = cross_validate(pipe, X, y, cv=kf, scoring=scoring)
+                results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
                 accuracy_scores.append(results['test_accuracy'].mean())
                 f1_scores.append(results['test_f1'].mean())
                 precision_scores.append(results['test_precision'].mean())
                 recall_scores.append(results['test_recall'].mean())
 
-            plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators')
+            plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced')
         
             accuracy_scores = np.array(accuracy_scores)
-            f1_scores = np.array(f1_scores)
-            precision_scores = np.array(precision_scores)
-            recall_scores = np.array(recall_scores)
-        
-            print(f"Accuracy: {accuracy_scores.mean()}")
-            print(f"F1 Score: {f1_scores.mean()}")
-            print(f"Precision: {precision_scores.mean()}")
-            print(f"Recall: {recall_scores.mean()}")
-        
+            best_acc = accuracy_scores.argmax()
+
+            model = GradientBoostingClassifier(
+                    loss=best_params['model__loss'],
+                    learning_rate=best_params['model__learning_rate'],
+                    n_estimators=n_estimators_values[best_acc],
+                    min_samples_split=best_params['model__min_samples_split'],
+                    min_samples_leaf=best_params['model__min_samples_leaf']
+                )
+            
+            pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+            pipe.fit(X_train, y_train)
+
+            y_pred = pipe.predict(X_test)
+
+            plot_confusion_matrix(y_test, y_pred, 'GradientBoostingEstimators')
+
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred)
+            precision = precision_score(y_test, y_pred)
+            recall = recall_score(y_test, y_pred)
+
             #salvataggio su file
-            with open('GradientBoostingTrainingEstimators.txt', 'w') as f:
-                f.write(f"Accuracy: {accuracy_scores.mean()}\n")
-                f.write(f"F1 Score: {f1_scores.mean()}\n")
-                f.write(f"Precision: {precision_scores.mean()}\n")
-                f.write(f"Recall: {recall_scores.mean()}\n")
+            with open('GradientBoostingBestEstimatorsBalanced.txt', 'w') as f:
+                f.write(f"Accuracy: {accuracy}\n")
+                f.write(f"F1 Score: {f1}\n")
+                f.write(f"Precision: {precision}\n")
+                f.write(f"Recall: {recall}\n")
 
 def plot_scores(x_values, accuracy_scores, f1_scores, precision_scores, recall_scores, x_label, title):
     plt.figure(figsize=(12, 8))
@@ -373,32 +441,51 @@ def plot_scores(x_values, accuracy_scores, f1_scores, precision_scores, recall_s
     plt.grid(True)
     plt.savefig(f'{title}.png')
 
+def plot_confusion_matrix(y_test, y_pred, model_name):
+      #matrice di confusione
+    cm = confusion_matrix(y_test, y_pred)
+    print(cm)
+
+    class_names = ['Failed', 'Passed']
+    
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title(f'Confusion Matrix {model_name}')
+    #salva la matrice di confusione in un file
+    plt.savefig(f'ConfusionMatrix{model_name}.png')
+
 
 def main():
-    X, y = preprocess_data()
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=True)
     
     # Search and train the best hyperparameters for each model
 
-    # Random Forest
-    best_params_rf = search_best_hyperparameters(X, y, 'RandomForest')
-    training_randomforest_on_maxdepth(X, y, best_params_rf)
-    training_randomforest_on_n_estimators(X, y, best_params_rf)
+    #Random Forest
+    print("Random Forest")
+    best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
+    training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf)
+    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf)
 
     # Logistic Regression
-    best_params_lr = search_best_hyperparameters(X, y, 'LogisticRegression')
-    training_LogisticRegression(X, y, best_params_lr)
+    print("Logistic Regression")
+    best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
+    training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr)
   
     # Decision Tree
-    best_params_dt = search_best_hyperparameters(X, y, 'DecisionTree')
-    training_DecisionTree(X, y, best_params_dt)
+    print("Decision Tree")
+    best_params_dt = search_best_hyperparameters(X_train, y_train, 'DecisionTree')
+    training_DecisionTree(X_train, y_train, X_test, y_test, best_params_dt)
     
     # Gradient Boosting
-    best_params_gb = search_best_hyperparameters(X, y, 'GradientBoosting')
-    training_GradientBoosting_on_maxdepth(X, y, best_params_gb)
-    training_GradientBoosting_on_n_estimators(X, y, best_params_gb)
+    print("Gradient Boosting")
+    best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
+    training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb)
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb)
 
     # Naive Bayes
-    Naive_Bayes()
+    #Naive_Bayes()
 
 def Naive_Bayes():
     model = CategoricalNB()
