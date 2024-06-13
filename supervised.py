@@ -20,8 +20,9 @@ def balance_dataset(X, y):
     count_class_majority = y.value_counts()[1]  # Classe maggioritaria (pass)
     count_class_minority = y.value_counts()[0]  # Classe minoritaria (fail)
 
-    # Calcola la sampling_strategy per una proporzione 60-40
-    sampling_strategy = (0.31 * count_class_majority) / count_class_minority
+    desiderd_minority = 0.16 * (count_class_majority + count_class_minority)
+    
+    sampling_strategy = desiderd_minority / count_class_minority
 
     # Bilancia il dataset con SMOTE utilizzando la strategia calcolata
     smote = SMOTE(sampling_strategy=sampling_strategy, random_state=42)
@@ -43,6 +44,9 @@ def preprocess_data(balanced = True):
 
     if balanced:
         X_train, y_train = balance_dataset(X_train, y_train)
+
+    print("Numero di campioni per ogni valore di RESULTS:")
+    print(y_train.value_counts())
 
     return X_train, y_train, X_test, y_test
 
@@ -88,7 +92,7 @@ def search_best_hyperparameters(X_train, y_train, model_name):
 
 def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params):
 
-    max_depth_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    max_depth_values = [i for i in range(1,25)]
 
     accuracy_scores = []
     f1_scores = []
@@ -208,7 +212,7 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
 
 def training_DecisionTree(X_train, y_train, X_test, y_test, best_params):
     
-        max_depth_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        max_depth_values = [i for i in range(1,25)]
     
         accuracy_scores = []
         f1_scores = []
@@ -299,7 +303,7 @@ def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params):
 
 def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params):
         
-            max_depth_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            max_depth_values = [i for i in range(1,25)]
         
             accuracy_scores = []
             f1_scores = []
