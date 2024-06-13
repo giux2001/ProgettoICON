@@ -5,31 +5,45 @@ from pgmpy.estimators import MaximumLikelihoodEstimator
 import matplotlib.pyplot as plt
 import networkx as nx
 from pgmpy.inference import VariableElimination
+from pgmpy.readwrite import BIFWriter, XMLBIFWriter
 from imblearn.over_sampling import SMOTE
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder
 
 
 #Bilancia il dataset con SMOTE per generare nuovi campioni con RESULTS=0 e restituire un dataset bilanciato
-def balance_dataset(data):
-    #Bilancia il dataset con SMOTE
-    smote = SMOTE(sampling_strategy='minority')
-    X = data.drop('RESULTS', axis=1)
-    y = data['RESULTS']
+def balance_dataset(X, y):
+    # Calcola il numero di esempi in ciascuna classe
+    count_class_majority = y.value_counts()[1]  # Classe maggioritaria (pass)
+    count_class_minority = y.value_counts()[0]  # Classe minoritaria (fail)
+
+    desiderd_minority = 0.11 * (count_class_majority + count_class_minority)
+    
+    sampling_strategy = desiderd_minority / count_class_minority
+
+    # Bilancia il dataset con SMOTE utilizzando la strategia calcolata
+    smote = SMOTE(sampling_strategy=sampling_strategy, random_state=42)
     X_resampled, y_resampled = smote.fit_resample(X, y)
+    
     data_resampled = pd.concat([X_resampled, y_resampled], axis=1)
     return data_resampled
 
 def create_Bayesian_Network():
 # Carica il dataset
     data = pd.read_csv('Working_Dataset.csv')
+    #le = LabelEncoder()
+    #data['FACILITY_TYPE'] = le.fit_transform(data['FACILITY_TYPE'])
 
     # Seleziona un sottoinsieme di colonne
-    columns_of_interest = ['RESULTS', 'IS_HIGH_CRIME_AREA', 'IS_LOW_HEALTH_AREA', 'IS_HIGH_BELOW_POVERTY_LEVEL', 'IS_LOW_PER_CAPITA_INCOME', 'IS_HIGH_UNEMPLOYMENT_RATE']
+    columns_of_interest = ['RESULTS', 'IS_HIGH_CRIME_AREA', 'IS_LOW_HEALTH_AREA', 'IS_HIGH_BELOW_POVERTY_LEVEL', 'IS_LOW_PER_CAPITA_INCOME', 'IS_HIGH_UNEMPLOYMENT_RATE','NO_VIOLATIONS','VIOLATIONS_ON_MANAGEMENT_AND_SUPERVISION','VIOLATIONS_ON_HYGIENE_AND_FOOD_SECURITY','VIOLATIONS_ON_TEMPERATURE_AND_SPECIAL_PROCEDURES','VIOLATIONS_ON_FOOD_SAFETY_AND_QUALITY','VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE','VIOLATIONS_ON_FACILITIES_AND_REGULATIONS','HAS_INSP_SERIOUS_VIOL','FACILITY_TYPE']
     data_subset = data[columns_of_interest]
     #lambda per mappare i result 2 in 1
-    #data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 1 if x == 2 else x)
-    data_subset = balance_dataset(data_subset)
+    data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 1 if x == 2 else x)
+    X = data_subset.drop('RESULTS', axis=1)
+    y = data_subset['RESULTS']
+    #data_subset = balance_dataset(X, y)
+
+
 
     # Stampa il numero di RESULTS per ogni valore
     print("Numero di campioni per ogni valore di RESULTS:")
@@ -51,6 +65,8 @@ def create_Bayesian_Network():
     for cpd in model.get_cpds():
         print(f"CPD per variabile {cpd.variable}")
         print(cpd)
+
+    save_BN(model)
 
     return model
 
@@ -76,20 +92,25 @@ def query_BN(model):
     # Crea l'oggetto per l'inferenza
     inference = VariableElimination(model)
 
-    # Query senza evidenza
+    '''# Query senza evidenza
     result = inference.query(variables=['RESULTS'])
     print("Risultato query senza evidenza:")
+    print(result)'''
+
+    #Query che calcola la probabilità che Restaurants falliscano
+    result = inference.query(variables=['IS_HIGH_BELOW_POVERTY_LEVEL'], evidence={'RESULTS': 1})
+    print("Risultato query con evidenza:")
     print(result)
 
-    # Query con evidenza
+    '''# Query con evidenza
     evidence = {'IS_HIGH_CRIME_AREA': 1, 'IS_LOW_HEALTH_AREA': 1}
     result_with_evidence = inference.query(variables=['RESULTS'], evidence=evidence)
     print("Risultato query con evidenza:")
-    print(result_with_evidence)
+    print(result_with_evidence)'''
 
 #funzione che effettua forward sampling per generare campioni casuali
 def forward_sampling(model, n_samples=10):
-    samples = model.simulate(n_samples=n_samples)
+    samples = model.simulate(n_samples=n_samples).drop(columns=['RESULTS'])
     print(f"{n_samples} campioni casuali generati:")
     print(samples)
     return samples
@@ -103,7 +124,23 @@ def posterior_probability(model, variable, evidence):
     result = inference.map_query(variables=[variable], evidence=evidence)
     print(result)
 
+# funzione che salva la rete bayesiana in un file .bif
+def save_BN(model):
+    writer = BIFWriter(model)
+    writer.write_bif('bayesian_network.bif')
+
+#funzione che carica la rete bayesiana da un file .bif
+def load_BN(file):
+    model = BayesianNetwork()
+    model = model.read_bif(file)
+    return model
+
+
 model = create_Bayesian_Network()
 samples = forward_sampling(model, n_samples=1000)
-posterior_probability(model, 'RESULTS', samples.drop(columns=['RESULTS']).iloc[0])
-posterior_probability(model, 'RESULTS', samples.drop(columns=['RESULTS']).iloc[1])
+query_BN(model)
+#cicla sul numero di campioni generati
+for i in range(0, 5):
+    evidence = samples.iloc[i].to_dict()
+    posterior_probability(model, 'RESULTS', evidence)
+
