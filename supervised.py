@@ -10,13 +10,23 @@ from sklearn.metrics import make_scorer, accuracy_score, f1_score, precision_sco
 from sklearn.naive_bayes import CategoricalNB
 import numpy as np
 import matplotlib.pyplot as plt
+from imblearn.over_sampling import SMOTE
+
+def balance_dataset(data):
+    #Bilancia il dataset con SMOTE
+    smote = SMOTE(sampling_strategy='minority')
+    X = data.drop('RESULTS', axis=1)
+    y = data['RESULTS']
+    X_resampled, y_resampled = smote.fit_resample(X, y)
+    data_resampled = pd.concat([X_resampled, y_resampled], axis=1)
+    return data_resampled
 
 def preprocess_data(only_categorical = False):
     df = pd.read_csv("Working_Dataset.csv")
     le = LabelEncoder()
     df['FACILITY_TYPE'] = le.fit_transform(df['FACILITY_TYPE'])
     df = df[df['NUM_INSP_AREA'] > 1]
-    df['RESULTS'] = df['RESULTS'].apply(lambda x: 1 if x == 2 else x)
+    df['RESULTS'] = df['RESULTS'].apply(lambda x: 1 if x == 2 else x) 
     if only_categorical:
         X = df.drop(['INSPECTION_ID', 'DBA NAME', 'RESULTS', 'COMMUNITY_AREA', 'NUM_INSP_AREA','PERC_INS_FAILED_AREA','PERC_INS_PASSED_AREA','PERC_INS_PASSED_COND_AREA','PERC_SERIOUS_VIOLATIONS_FAILED_AREA','AREA_BELOW_POVERTY_LEVEL','AREA_PER_CAPITA_INCOME','AREA_UNEMPLOYMENT','AREA_CRIME_INDEX','AREA_HEALTH_INDEX'], axis=1)
         y = df['RESULTS']
