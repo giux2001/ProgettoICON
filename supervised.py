@@ -45,9 +45,6 @@ def preprocess_data(balanced = True):
     if balanced:
         X_train, y_train = balance_dataset(X_train, y_train)
 
-    print("Numero di campioni per ogni valore di RESULTS:")
-    print(y_train.value_counts())
-
     return X_train, y_train, X_test, y_test
 
 def search_best_hyperparameters(X_train, y_train, model_name):
@@ -123,7 +120,7 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
     plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Not Balanced')
     plot_learning_curve(X_train, y_train, pipe, 'Random Forest Depth Learning Curve Not Balanced')
     
-
+ 
     #convertire in numpy array per usare argmax
     accuracy_scores = np.array(accuracy_scores)
     best_accuracy = accuracy_scores.argmax()

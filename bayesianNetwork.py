@@ -1,4 +1,5 @@
 import pandas as pd
+import pickle
 from pgmpy.estimators import HillClimbSearch, BicScore
 from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import MaximumLikelihoodEstimator
@@ -10,45 +11,17 @@ from imblearn.over_sampling import SMOTE
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder
 
-
-#Bilancia il dataset con SMOTE per generare nuovi campioni con RESULTS=0 e restituire un dataset bilanciato
-def balance_dataset(X, y):
-    # Calcola il numero di esempi in ciascuna classe
-    count_class_majority = y.value_counts()[1]  # Classe maggioritaria (pass)
-    count_class_minority = y.value_counts()[0]  # Classe minoritaria (fail)
-
-    desiderd_minority = 0.11 * (count_class_majority + count_class_minority)
-    
-    sampling_strategy = desiderd_minority / count_class_minority
-
-    # Bilancia il dataset con SMOTE utilizzando la strategia calcolata
-    smote = SMOTE(sampling_strategy=sampling_strategy, random_state=42)
-    X_resampled, y_resampled = smote.fit_resample(X, y)
-    
-    data_resampled = pd.concat([X_resampled, y_resampled], axis=1)
-    return data_resampled
-
 def create_Bayesian_Network():
 # Carica il dataset
     data = pd.read_csv('Working_Dataset.csv')
-    #le = LabelEncoder()
-    #data['FACILITY_TYPE'] = le.fit_transform(data['FACILITY_TYPE'])
 
     # Seleziona un sottoinsieme di colonne
-    columns_of_interest = ['RESULTS', 'IS_HIGH_CRIME_AREA', 'IS_LOW_HEALTH_AREA', 'IS_HIGH_BELOW_POVERTY_LEVEL', 'IS_LOW_PER_CAPITA_INCOME', 'IS_HIGH_UNEMPLOYMENT_RATE','NO_VIOLATIONS','VIOLATIONS_ON_MANAGEMENT_AND_SUPERVISION','VIOLATIONS_ON_HYGIENE_AND_FOOD_SECURITY','VIOLATIONS_ON_TEMPERATURE_AND_SPECIAL_PROCEDURES','VIOLATIONS_ON_FOOD_SAFETY_AND_QUALITY','VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE','VIOLATIONS_ON_FACILITIES_AND_REGULATIONS','HAS_INSP_SERIOUS_VIOL','FACILITY_TYPE']
+    columns_of_interest = ['RESULTS', 'IS_HIGH_CRIME_AREA', 'IS_LOW_HEALTH_AREA', 'IS_HIGH_BELOW_POVERTY_LEVEL', 'IS_LOW_PER_CAPITA_INCOME', 'IS_HIGH_UNEMPLOYMENT_RATE','NO_VIOLATIONS','VIOLATIONS_ON_MANAGEMENT_AND_SUPERVISION','VIOLATIONS_ON_HYGIENE_AND_FOOD_SECURITY','VIOLATIONS_ON_TEMPERATURE_AND_SPECIAL_PROCEDURES','VIOLATIONS_ON_FOOD_SAFETY_AND_QUALITY','VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE','VIOLATIONS_ON_FACILITIES_AND_REGULATIONS','HAS_INSP_SERIOUS_VIOL']
     data_subset = data[columns_of_interest]
     #lambda per mappare i result 2 in 1
     data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 1 if x == 2 else x)
-    X = data_subset.drop('RESULTS', axis=1)
-    y = data_subset['RESULTS']
-    #data_subset = balance_dataset(X, y)
-
-
-
-    # Stampa il numero di RESULTS per ogni valore
-    print("Numero di campioni per ogni valore di RESULTS:")
-    print(data_subset['RESULTS'].value_counts())
-
+    #lambda per mapapre i result 0 in not pass e 1 in pass
+    data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 'FAIL' if x == 0 else 'PASS')
 
     # Apprendimento della struttura usando HillClimbSearch
     print("Inizio HILL")
@@ -59,7 +32,7 @@ def create_Bayesian_Network():
     # Apprendimento dei parametri
     model = BayesianNetwork(best_model.edges())
     model.fit(data_subset, estimator=MaximumLikelihoodEstimator)
-    visualize_BN(data_subset, best_model)
+    visualize_BN(model)
 
     # Verifica la distribuzione condizionale appresa per una variabile
     for cpd in model.get_cpds():
@@ -70,21 +43,48 @@ def create_Bayesian_Network():
 
     return model
 
-def visualize_BN(data_subset, best_model):
-
-    # Crea il grafo utilizzando networkx
-    nx_graph = nx.DiGraph()
-    nx_graph.add_nodes_from(data_subset.columns)
-    nx_graph.add_edges_from(best_model.edges())
-
-    # Disegna il grafo utilizzando matplotlib
-    plt.figure(figsize=(12, 8))
-    pos = nx.spring_layout(nx_graph)  # Layout per il posizionamento dei nodi
-    nx.draw(nx_graph, pos, with_labels=True, node_size=3000, node_color='skyblue', font_size=10, font_color='black', edge_color='gray', arrows=True)
-    plt.title('Rete Bayesiana Appresa')
+def visualizeBayesianNetwork(bayesianNetwork):
+    # Create a directed graph from the Bayesian Network edges
+    G = nx.MultiDiGraph(bayesianNetwork.edges())
+    
+    # Define the layout of the graph nodes
+    pos = nx.spring_layout(G, iterations=100, k=2, threshold=5, pos=nx.spiral_layout(G))
+    
+    # Draw the nodes with specified size and color
+    nx.draw_networkx_nodes(G, pos, node_size=200, node_color="#00b4d8", edgecolors="#023e8a", linewidths=1.5)
+    
+    # Draw the labels for the nodes
+    nx.draw_networkx_labels(
+        G,
+        pos,
+        font_size=10,
+        font_weight="bold",
+        bbox=dict(facecolor='white', edgecolor='none', pad=0.5),  # Add a white background to labels for better readability
+        horizontalalignment="center",
+        verticalalignment="center",
+    )
+    
+    # Draw the edges with arrows and specific style
+    nx.draw_networkx_edges(
+        G,
+        pos,
+        arrows=True,
+        arrowsize=10,
+        arrowstyle="-|>",
+        edge_color="#0077b6",
+        connectionstyle="arc3,rad=0.2",  # Use arc style for edges
+        min_source_margin=1.5,
+        min_target_margin=1.5,
+    )
+    
+    # Add a title to the plot
+    plt.title("Bayesian Network Graph", fontsize=15, fontweight='bold', color="#03045e")
+    
+    # Display the graph
     plt.show()
-    #salva il grafo in un file
-    plt.savefig('bayesian_network.png')
+    
+    # Clear the plot to avoid overlaps in subsequent calls
+    plt.clf()
 
 # Esegui delle query sulla rete bayesiana
 
@@ -92,21 +92,35 @@ def query_BN(model):
     # Crea l'oggetto per l'inferenza
     inference = VariableElimination(model)
 
-    '''# Query senza evidenza
-    result = inference.query(variables=['RESULTS'])
-    print("Risultato query senza evidenza:")
-    print(result)'''
-
-    #Query che calcola la probabilità che Restaurants falliscano
-    result = inference.query(variables=['IS_HIGH_BELOW_POVERTY_LEVEL'], evidence={'RESULTS': 1})
-    print("Risultato query con evidenza:")
+    result = inference.query(variables=['IS_HIGH_BELOW_POVERTY_LEVEL'], evidence={'RESULTS': 'PASS'})
+    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di povertà dato che un ristorante ha passato l'ispezione:")
     print(result)
 
-    '''# Query con evidenza
-    evidence = {'IS_HIGH_CRIME_AREA': 1, 'IS_LOW_HEALTH_AREA': 1}
-    result_with_evidence = inference.query(variables=['RESULTS'], evidence=evidence)
-    print("Risultato query con evidenza:")
-    print(result_with_evidence)'''
+    #Query che calcola la probabilità che un'area abbia un basso indice di salute dato che un ristorante ha passato l'ispezione
+    result = inference.query(variables=['IS_LOW_HEALTH_AREA'], evidence={'RESULTS': 'PASS'})
+    print("Risultato della query che calcola la probabilità che un'area abbia un basso indice di salute dato che un ristorante ha passato l'ispezione:")
+    print(result)
+
+    #Query che calcola la probabilità che un'area abbia un alto tasso di disoccupazione dato che un ristorante ha passato l'ispezione
+    result = inference.query(variables=['IS_HIGH_UNEMPLOYMENT_RATE'], evidence={'RESULTS': 'PASS'})
+    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di disoccupazione dato che un ristorante ha passato l'ispezione:")
+    print(result)
+
+    #Query che calcola la probabilità che un'area abbia un alto tasso di criminalità dato che un ristorante ha passato l'ispezione
+    result = inference.query(variables=['IS_HIGH_CRIME_AREA'], evidence={'RESULTS': 'PASS'})
+    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di criminalità dato che un ristorante ha passato l'ispezione:")
+    print(result)
+
+    #Query che calcola la probabilità che un ristorante abbia un basso reddito pro capite dato che ha passato l'ispezione
+    result = inference.query(variables=['IS_LOW_PER_CAPITA_INCOME'], evidence={'RESULTS': 'PASS'})
+    print("Risultato della query che calcola la probabilità che un ristorante abbia un basso reddito pro capite dato che ha passato l'ispezione:")
+    print(result)
+
+    #Query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione
+    result = inference.query(variables=['HAS_INSP_SERIOUS_VIOL'], evidence={'RESULTS': 'PASS'})
+    print("Risultato della query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione:")
+    print(result)
+
 
 #funzione che effettua forward sampling per generare campioni casuali
 def forward_sampling(model, n_samples=10):
@@ -124,23 +138,25 @@ def posterior_probability(model, variable, evidence):
     result = inference.map_query(variables=[variable], evidence=evidence)
     print(result)
 
-# funzione che salva la rete bayesiana in un file .bif
+#salva la rete bayesiana in un file
 def save_BN(model):
-    writer = BIFWriter(model)
-    writer.write_bif('bayesian_network.bif')
+    with open('bayesian_network.pkl', 'wb') as f:
+        pickle.dump(model, f)
 
-#funzione che carica la rete bayesiana da un file .bif
-def load_BN(file):
-    model = BayesianNetwork()
-    model = model.read_bif(file)
+#carica la rete bayesiana da un file
+def load_BN():
+    with open('bayesian_network.pkl', 'rb') as f:
+        model = pickle.load(f)
+    #visualize_BN(model)
+    visualizeBayesianNetwork(model)
     return model
 
-
-model = create_Bayesian_Network()
+#model = create_Bayesian_Network()
+model = load_BN()
 samples = forward_sampling(model, n_samples=1000)
 query_BN(model)
 #cicla sul numero di campioni generati
-for i in range(0, 5):
+for i in range(0, 10):
     evidence = samples.iloc[i].to_dict()
     posterior_probability(model, 'RESULTS', evidence)
 
