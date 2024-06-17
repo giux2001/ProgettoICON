@@ -1,5 +1,5 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split, KFold, cross_validate
+from sklearn.model_selection import train_test_split, KFold, cross_validate, learning_curve
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -44,9 +44,6 @@ def preprocess_data(balanced = True):
 
     if balanced:
         X_train, y_train = balance_dataset(X_train, y_train)
-
-    print("Numero di campioni per ogni valore di RESULTS:")
-    print(y_train.value_counts())
 
     return X_train, y_train, X_test, y_test
 
@@ -120,8 +117,10 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
         precision_scores.append(results['test_precision'].mean())
         recall_scores.append(results['test_recall'].mean())
 
-    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Balanced')
-
+    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Not Balanced')
+    plot_learning_curve(X_train, y_train, pipe, 'Random Forest Depth Learning Curve Not Balanced')
+    
+ 
     #convertire in numpy array per usare argmax
     accuracy_scores = np.array(accuracy_scores)
     best_accuracy = accuracy_scores.argmax()
@@ -136,15 +135,16 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
     pipe.fit(X_train, y_train)
     y_pred = pipe.predict(X_test)
 
-    plot_confusion_matrix(y_test, y_pred, 'RandomForestMaxDepth')
+    plot_confusion_matrix(y_test, y_pred, 'RandomForestMaxDepthNotBalanced')
 
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
 
+
     #salvataggio su file
-    with open('RandomForestBestDepthBalanced.txt', 'w') as f:
+    with open('RandomForestBestDepthNotBalanced.txt', 'w') as f:
         f.write(f"Accuracy: {accuracy}\n")
         f.write(f"F1 Score: {f1}\n")
         f.write(f"Precision: {precision}\n")
@@ -180,7 +180,8 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
             precision_scores.append(results['test_precision'].mean())
             recall_scores.append(results['test_recall'].mean())
 
-        plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Balanced')
+        plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Not Balanced')
+        plot_learning_curve(X_train, y_train, pipe, 'Random Forest Estimators Learning Curve Not Balanced')
 
         accuracy_scores = np.array(accuracy_scores)
         best_accuracy = accuracy_scores.argmax()
@@ -196,7 +197,7 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
         pipe.fit(X_train, y_train)
         y_pred = pipe.predict(X_test)
 
-        plot_confusion_matrix(y_test, y_pred, 'RandomForestEstimators')
+        plot_confusion_matrix(y_test, y_pred, 'RandomForestEstimatorsNotBalanced')
 
         accuracy = accuracy_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred)
@@ -204,7 +205,7 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
         recall = recall_score(y_test, y_pred)
 
         #salvataggio su file
-        with open('RandomForestBestEstimatorsBalanced.txt', 'w') as f:
+        with open('RandomForestBestEstimatorsNotBalanced.txt', 'w') as f:
             f.write(f"Accuracy: {accuracy}\n")
             f.write(f"F1 Score: {f1}\n")
             f.write(f"Precision: {precision}\n")
@@ -241,8 +242,8 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params):
             precision_scores.append(results['test_precision'].mean())
             recall_scores.append(results['test_recall'].mean())
 
-        plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Balanced')
-        
+        plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Not Balanced')
+        plot_learning_curve(X_train, y_train, pipe, 'Decision Tree Learning Curve Not Balanced')
 
         accuracy_scores = np.array(accuracy_scores)
         best_accuracy = accuracy_scores.argmax()
@@ -258,7 +259,8 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params):
         pipe.fit(X_train, y_train)
         y_pred = pipe.predict(X_test)
 
-        plot_confusion_matrix(y_test, y_pred, 'DecisionTree')
+        
+        plot_confusion_matrix(y_test, y_pred, 'DecisionTreeNotBalanced')
 
 
         accuracy = accuracy_score(y_test, y_pred)
@@ -267,7 +269,7 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params):
         recall = recall_score(y_test, y_pred)
 
         #salvataggio su file
-        with open('DecisionTreeBestDepthBalanced.txt', 'w') as f:
+        with open('DecisionTreeBestDepthNotBalanced.txt', 'w') as f:
             f.write(f"Accuracy: {accuracy}\n")
             f.write(f"F1 Score: {f1}\n")
             f.write(f"Precision: {precision}\n")
@@ -292,10 +294,10 @@ def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params):
     recall = recall_score(y_test, y_pred)
 
     #matrice di confusione
-    plot_confusion_matrix(y_test, y_pred, 'LogisticRegression')
+    plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionNotBalanced')
 
     #salvataggio su file
-    with open('LogisticRegressionBalanced.txt', 'w') as f:
+    with open('LogisticRegressionNotBalanced.txt', 'w') as f:
         f.write(f"Accuracy: {accuracy}\n")
         f.write(f"F1 Score: {f1}\n")
         f.write(f"Precision: {precision}\n")
@@ -332,7 +334,8 @@ def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best
                 precision_scores.append(results['test_precision'].mean())
                 recall_scores.append(results['test_recall'].mean())
 
-            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Balanced')
+            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced')
+            plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Depth Learning Curve Not Balanced')
 
             accuracy_scores = np.array(accuracy_scores)
             best_acc = accuracy_scores.argmax()
@@ -350,7 +353,7 @@ def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best
 
             y_pred = pipe.predict(X_test)
 
-            plot_confusion_matrix(y_test, y_pred, 'GradientBoostingMaxDepth')
+            plot_confusion_matrix(y_test, y_pred, 'GradientBoostingMaxDepthNotBalanced')
 
             accuracy = accuracy_score(y_test, y_pred)
             f1 = f1_score(y_test, y_pred)
@@ -358,7 +361,7 @@ def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best
             recall = recall_score(y_test, y_pred)
 
             #salvataggio su file
-            with open('GradientBoostingBestDepthBalanced.txt', 'w') as f:
+            with open('GradientBoostingBestDepthNotBalanced.txt', 'w') as f:
                 f.write(f"Accuracy: {accuracy}\n")
                 f.write(f"F1 Score: {f1}\n")
                 f.write(f"Precision: {precision}\n")
@@ -398,7 +401,8 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
                 precision_scores.append(results['test_precision'].mean())
                 recall_scores.append(results['test_recall'].mean())
 
-            plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced')
+            plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced')
+            plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Estimators Learning Curve Not Balanced')
         
             accuracy_scores = np.array(accuracy_scores)
             best_acc = accuracy_scores.argmax()
@@ -416,7 +420,7 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
 
             y_pred = pipe.predict(X_test)
 
-            plot_confusion_matrix(y_test, y_pred, 'GradientBoostingEstimators')
+            plot_confusion_matrix(y_test, y_pred, 'GradientBoostingEstimatorsNotBalanced')
 
             accuracy = accuracy_score(y_test, y_pred)
             f1 = f1_score(y_test, y_pred)
@@ -424,7 +428,7 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
             recall = recall_score(y_test, y_pred)
 
             #salvataggio su file
-            with open('GradientBoostingBestEstimatorsBalanced.txt', 'w') as f:
+            with open('GradientBoostingBestEstimatorsNotBalanced.txt', 'w') as f:
                 f.write(f"Accuracy: {accuracy}\n")
                 f.write(f"F1 Score: {f1}\n")
                 f.write(f"Precision: {precision}\n")
@@ -445,6 +449,26 @@ def plot_scores(x_values, accuracy_scores, f1_scores, precision_scores, recall_s
     plt.grid(True)
     plt.savefig(f'{title}.png')
 
+def plot_learning_curve(X_train, y_train, model, title):
+    train_sizes, train_scores, test_scores = learning_curve(model, X_train, y_train, cv=5, n_jobs=-1, train_sizes=np.linspace(.1, 1.0, 10))
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 7))
+    plt.grid()
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+             label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+             label="Cross-validation score")
+
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    plt.legend(loc="best")
+    plt.title(title)
+    plt.savefig(f'{title}.png')
+
 def plot_confusion_matrix(y_test, y_pred, model_name):
       #matrice di confusione
     cm = confusion_matrix(y_test, y_pred)
@@ -462,7 +486,7 @@ def plot_confusion_matrix(y_test, y_pred, model_name):
 
 
 def main():
-    X_train, y_train, X_test, y_test = preprocess_data(balanced=True)
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=False)
     
     # Search and train the best hyperparameters for each model
 
