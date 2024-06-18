@@ -18,10 +18,7 @@ def create_Bayesian_Network():
     # Seleziona un sottoinsieme di colonne
     columns_of_interest = ['RESULTS', 'IS_HIGH_CRIME_AREA', 'IS_LOW_HEALTH_AREA', 'IS_HIGH_BELOW_POVERTY_LEVEL', 'IS_LOW_PER_CAPITA_INCOME', 'IS_HIGH_UNEMPLOYMENT_RATE','NO_VIOLATIONS','VIOLATIONS_ON_MANAGEMENT_AND_SUPERVISION','VIOLATIONS_ON_HYGIENE_AND_FOOD_SECURITY','VIOLATIONS_ON_TEMPERATURE_AND_SPECIAL_PROCEDURES','VIOLATIONS_ON_FOOD_SAFETY_AND_QUALITY','VIOLATIONS_ON_INSTRUMENT_STORAGE_AND_MAINTENANCE','VIOLATIONS_ON_FACILITIES_AND_REGULATIONS','HAS_INSP_SERIOUS_VIOL']
     data_subset = data[columns_of_interest]
-    #lambda per mappare i result 2 in 1
-    data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 1 if x == 2 else x)
-    #lambda per mapapre i result 0 in not pass e 1 in pass
-    data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 'FAIL' if x == 0 else 'PASS')
+    data_subset['RESULTS'] = data_subset['RESULTS'].apply(lambda x: 'NOT PASS' if x == 0 else 'PASS' if x == 1 else 'PASS WITH CONDITIONS')
 
     # Apprendimento della struttura usando HillClimbSearch
     print("Inizio HILL")
@@ -32,7 +29,7 @@ def create_Bayesian_Network():
     # Apprendimento dei parametri
     model = BayesianNetwork(best_model.edges())
     model.fit(data_subset, estimator=MaximumLikelihoodEstimator)
-    visualize_BN(model)
+    visualizeBayesianNetwork(model)
 
     # Verifica la distribuzione condizionale appresa per una variabile
     for cpd in model.get_cpds():
@@ -119,6 +116,11 @@ def query_BN(model):
     #Query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione
     result = inference.query(variables=['HAS_INSP_SERIOUS_VIOL'], evidence={'RESULTS': 'PASS'})
     print("Risultato della query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione:")
+    print(result)
+
+    #Query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezioneù
+    result = inference.query(variables=['RESULTS'], evidence={'HAS_INSP_SERIOUS_VIOL': 1, 'IS_HIGH_CRIME_AREA': 1, 'IS_LOW_HEALTH_AREA': 1})
+    print("Risultato della query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione con condizioni:")
     print(result)
 
 
