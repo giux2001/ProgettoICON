@@ -480,7 +480,7 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params, balance
                     f.write(f"Recall: {recall}\n")
         
 
-def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params, balanced=True, three_class=True):
+def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params, balanced=True, three_class=True, without_one_feature = False, feature = None):
 
     if three_class:
         model = LogisticRegression(
@@ -513,44 +513,53 @@ def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params, b
         precision = precision_score(y_test, y_pred)
         recall = recall_score(y_test, y_pred)
 
-    # Matrice di confusione
-    if three_class:
-        if balanced:
-            plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionBalancedThreeClass',three_class=True)
+    if not without_one_feature:
+        # Matrice di confusione
+        if three_class:
+            if balanced:
+                plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionBalancedThreeClass',three_class=True)
+            else:
+                plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionNotBalancedThreeClass',three_class=True)
         else:
-            plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionNotBalancedThreeClass',three_class=True)
-    else:
-        if balanced:
-            plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionBalanced',three_class=False)
-        else:
-            plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionNotBalanced',three_class=False)
+            if balanced:
+                plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionBalanced',three_class=False)
+            else:
+                plot_confusion_matrix(y_test, y_pred, 'LogisticRegressionNotBalanced',three_class=False)
 
-    if three_class:
-        if balanced:
-            with open('ThreeClassModels/LogisticRegressionBalancedThreeClass.txt', 'w') as f:
-                f.write(f"Accuracy: {accuracy}\n")
-                f.write(f"F1 Score: {f1}\n")
-                f.write(f"Precision: {precision}\n")
-                f.write(f"Recall: {recall}\n")
-        else:
-            with open('ThreeClassModels/LogisticRegressionNotBalancedThreeClass.txt', 'w') as f:
-                f.write(f"Accuracy: {accuracy}\n")
-                f.write(f"F1 Score: {f1}\n")
-                f.write(f"Precision: {precision}\n")
-                f.write(f"Recall: {recall}\n")
+    if without_one_feature:
+        with open(f'WithoutOneFeature/LogisticRegressionWithout{feature}.txt', 'w') as f:
+            f.write(f"Accuracy: {accuracy}\n")
+            f.write(f"F1 Score: {f1}\n")
+            f.write(f"Precision: {precision}\n")
+            f.write(f"Recall: {recall}\n")
+
     else:
-        if balanced:
-            with open('BinaryModels/LogisticRegressionBalanced.txt', 'w') as f:
-                f.write(f"Accuracy: {accuracy}\n")
-                f.write(f"F1 Score: {f1}\n")
-                f.write(f"Precision: {precision}\n")
-                f.write(f"Recall: {recall}\n")
+        if three_class:
+            if balanced:
+                with open('ThreeClassModels/LogisticRegressionBalancedThreeClass.txt', 'w') as f:
+                    f.write(f"Accuracy: {accuracy}\n")
+                    f.write(f"F1 Score: {f1}\n")
+                    f.write(f"Precision: {precision}\n")
+                    f.write(f"Recall: {recall}\n")
+            else:
+                with open('ThreeClassModels/LogisticRegressionNotBalancedThreeClass.txt', 'w') as f:
+                    f.write(f"Accuracy: {accuracy}\n")
+                    f.write(f"F1 Score: {f1}\n")
+                    f.write(f"Precision: {precision}\n")
+                    f.write(f"Recall: {recall}\n")
         else:
-            with open('BinaryModels/LogisticRegressionNotBalanced.txt', 'w') as f:
-                f.write(f"Accuracy: {accuracy}\n")
-                f.write(f"F1 Score: {f1}\n")
-                f.write(f"Precision: {precision}\n")
-                f.write(f"Recall: {recall}\n")
+            if balanced:
+                with open('BinaryModels/LogisticRegressionBalanced.txt', 'w') as f:
+                    f.write(f"Accuracy: {accuracy}\n")
+                    f.write(f"F1 Score: {f1}\n")
+                    f.write(f"Precision: {precision}\n")
+                    f.write(f"Recall: {recall}\n")
+            else:
+                with open('BinaryModels/LogisticRegressionNotBalanced.txt', 'w') as f:
+                    f.write(f"Accuracy: {accuracy}\n")
+                    f.write(f"F1 Score: {f1}\n")
+                    f.write(f"Precision: {precision}\n")
+                    f.write(f"Recall: {recall}\n")
 
 def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params, balanced=True, three_class=True):
         
@@ -909,9 +918,16 @@ def Naive_Bayes(X_train, y_train, X_test, y_test, balanced=True, three_class=Tru
                 f.write(f"Precision: {precision}\n")
                 f.write(f"Recall: {recall}\n")
 
+def train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_test, best_params_lr):
+    for feature in X_train:
+        print(f"Training Logistic Regression without {feature}")
+        X_train_without_one_feature = X_train.drop(columns=[feature])
+        X_test_without_one_feature = X_test.drop(columns=[feature])
+        training_LogisticRegression(X_train_without_one_feature, y_train, X_test_without_one_feature, y_test, best_params_lr, balanced=True, three_class=True, without_one_feature=True, feature=feature)
+
 def main():
     
-    X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
+    #X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
 
     '''#Random Forest 
     print("Random Forest non bilanciato binario")
@@ -935,7 +951,7 @@ def main():
     #training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)
     training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)'''
     
-    X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=True)
+    #X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=True)
 
     #Random Forest
     '''print("Random Forest non bilanciato tre classi")
@@ -961,7 +977,7 @@ def main():
 
 
 
-    X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=False)
+    #X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=False)
 
     #Random Forest
     '''print("Random Forest bilanciato binario")
@@ -986,7 +1002,7 @@ def main():
     training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)'''
 
 
-    X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
+    #X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
 
     #Random Forest
     '''print("Random Forest bilanciato tre classi")
@@ -1024,6 +1040,10 @@ def main():
     X_train, y_train, X_test, y_test = preprocess_data(balanced=False, only_categorical=True, three_class=True)
     Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)'''
 
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
+    best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
+    training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=True, three_class=True)
+    train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
 
 main()
 
