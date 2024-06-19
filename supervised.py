@@ -90,7 +90,7 @@ def search_best_hyperparameters(X_train, y_train, model_name):
         raise ValueError("Invalid model name")
 
     pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
-    grid = GridSearchCV(pipe, hyperparameters, cv=5)
+    grid = GridSearchCV(pipe, hyperparameters, cv=10)
     grid.fit(X_train, y_train)
     
     return grid.best_params_
@@ -224,11 +224,16 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
     
         n_estimators_values = [10, 20, 50, 100, 200, 500, 1000]
     
-        accuracy_scores = []
-        f1_scores = []
-        precision_scores = []
-        recall_scores = []
-    
+        accuracy_train_scores = []
+        f1_train_scores = []
+        precision_train_scores = []
+        recall_train_scores = []
+
+        accuracy_test_scores = []
+        f1_test_scores = []
+        precision_test_scores = []
+        recall_test_scores = []
+
         for n_estimators in n_estimators_values:
             model = RandomForestClassifier(
                 criterion=best_params['model__criterion'],
@@ -252,25 +257,33 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
                 'precision': make_scorer(precision_score),
                 'recall': make_scorer(recall_score)
                 }
-            results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
-            accuracy_scores.append(results['test_accuracy'].mean())
-            f1_scores.append(results['test_f1'].mean())
-            precision_scores.append(results['test_precision'].mean())
-            recall_scores.append(results['test_recall'].mean())
+            results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring, return_train_score=True)
+
+            accuracy_train_scores.append(results['train_accuracy'].mean())
+            f1_train_scores.append(results['train_f1'].mean())
+            precision_train_scores.append(results['train_precision'].mean())
+            recall_train_scores.append(results['train_recall'].mean())
+
+            accuracy_test_scores.append(results['test_accuracy'].mean())
+            f1_test_scores.append(results['test_f1'].mean())
+            precision_test_scores.append(results['test_precision'].mean())
+            recall_test_scores.append(results['test_recall'].mean())
+
+            
 
         if three_class:
             if balanced:
-                plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Balanced Three Class',three_class=True)
+                plot_scores(n_estimators_values, accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Random Forest Estimators Balanced Three Class',three_class=True)
             else:
-                plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Not Balanced Three Class',three_class=True)
+                plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Random Forest Estimators Not Balanced Three Class',three_class=True)
         else:
             if balanced:
-                plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Balanced',three_class=False)
+                plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Random Forest Estimators Balanced',three_class=False)
             else:
-                plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Not Balanced',three_class=False)
+                plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Random Forest Estimators Not Balanced',three_class=False)
 
-        accuracy_scores = np.array(accuracy_scores)
-        best_accuracy = accuracy_scores.argmax()
+        accuracy_test_scores = np.array(accuracy_test_scores)
+        best_accuracy = accuracy_test_scores.argmax()
 
         model = RandomForestClassifier(
                 criterion=best_params['model__criterion'],
@@ -336,10 +349,16 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params, balance
     
         max_depth_values = [i for i in range(1,25)]
     
-        accuracy_scores = []
-        f1_scores = []
-        precision_scores = []
-        recall_scores = []
+        accuracy_train_scores = []
+        f1_train_scores = []
+        precision_train_scores = []
+        recall_train_scores = []
+
+        accuracy_test_scores = []
+        f1_test_scores = []
+        precision_test_scores = []
+        recall_test_scores = []
+
     
         for max_depth in max_depth_values:
             model = DecisionTreeClassifier(
@@ -365,26 +384,31 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params, balance
                 'recall': make_scorer(recall_score)
                 }
             
-            results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
+            results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring, return_train_score=True)
 
-            accuracy_scores.append(results['test_accuracy'].mean())
-            f1_scores.append(results['test_f1'].mean())
-            precision_scores.append(results['test_precision'].mean())
-            recall_scores.append(results['test_recall'].mean())
+            accuracy_train_scores.append(results['train_accuracy'].mean())
+            f1_train_scores.append(results['train_f1'].mean())
+            precision_train_scores.append(results['train_precision'].mean())
+            recall_train_scores.append(results['train_recall'].mean())
+
+            accuracy_test_scores.append(results['test_accuracy'].mean())
+            f1_test_scores.append(results['test_f1'].mean())
+            precision_test_scores.append(results['test_precision'].mean())
+            recall_test_scores.append(results['test_recall'].mean())
 
         if three_class:
             if balanced:
-                plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Balanced Three Class',three_class=True)
+                plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Decision Tree Balanced Three Class',three_class=True)
             else:
-                plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Not Balanced Three Class',three_class=True)
+                plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Decision Tree Not Balanced Three Class',three_class=True)
         else:
             if balanced:
-                plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Balanced',three_class=False)
+                plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Decision Tree Balanced',three_class=False)
             else:
-                plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Not Balanced',three_class=False)
+                plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Decision Tree Not Balanced',three_class=False)
 
-        accuracy_scores = np.array(accuracy_scores)
-        best_accuracy = accuracy_scores.argmax()
+        accuracy_test_scores = np.array(accuracy_test_scores)
+        best_accuracy = accuracy_test_scores.argmax()
 
         model = DecisionTreeClassifier(
                 criterion=best_params['model__criterion'],
@@ -524,10 +548,16 @@ def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best
         
             max_depth_values = [i for i in range(1,10)]
         
-            accuracy_scores = []
-            f1_scores = []
-            precision_scores = []
-            recall_scores = []
+
+            accuracy_train_scores = []
+            f1_train_scores = []
+            precision_train_scores = []
+            recall_train_scores = []
+
+            accuracy_test_scores = []
+            f1_test_scores = []
+            precision_test_scores = []
+            recall_test_scores = []
         
             for max_depth in max_depth_values:
                 print(max_depth)
@@ -554,25 +584,30 @@ def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best
                     'precision': make_scorer(precision_score),
                     'recall': make_scorer(recall_score)
                     }
-                results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
-                accuracy_scores.append(results['test_accuracy'].mean())
-                f1_scores.append(results['test_f1'].mean())
-                precision_scores.append(results['test_precision'].mean())
-                recall_scores.append(results['test_recall'].mean())
+                results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring, return_train_score=True)
+                accuracy_train_scores.append(results['train_accuracy'].mean())
+                f1_train_scores.append(results['train_f1'].mean())
+                precision_train_scores.append(results['train_precision'].mean())
+                recall_train_scores.append(results['train_recall'].mean())
+
+                accuracy_test_scores.append(results['test_accuracy'].mean())
+                f1_test_scores.append(results['test_f1'].mean())
+                precision_test_scores.append(results['test_precision'].mean())
+                recall_test_scores.append(results['test_recall'].mean())
 
             if three_class:
                 if balanced:
-                    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Balanced Three Class',three_class=True)
+                    plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Gradient Boosting Depth Balanced Three Class',three_class=True)
                 else:
-                    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced Three Class',three_class=True)
+                    plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced Three Class',three_class=True)
             else:
                 if balanced:
-                    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Balanced',three_class=False)
+                    plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Gradient Boosting Depth Balanced',three_class=False)
                 else:
-                    plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced',three_class=False)
+                    plot_scores(max_depth_values,  accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced',three_class=False)
 
-            accuracy_scores = np.array(accuracy_scores)
-            best_acc = accuracy_scores.argmax()
+            accuracy_test_scores = np.array(accuracy_test_scores)
+            best_acc = accuracy_test_scores.argmax()
 
             model = GradientBoostingClassifier(
                     loss=best_params['model__loss'],
@@ -641,10 +676,15 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
         
             n_estimators_values = [10, 20, 50, 100, 200, 500, 1000]
         
-            accuracy_scores = []
-            f1_scores = []
-            precision_scores = []
-            recall_scores = []
+            accuracy_train_scores = []
+            f1_train_scores = []
+            precision_train_scores = []
+            recall_train_scores = []
+
+            accuracy_test_scores = []
+            f1_test_scores = []
+            precision_test_scores = []
+            recall_test_scores = []
         
             for n_estimators in n_estimators_values:
                 model = GradientBoostingClassifier(
@@ -670,26 +710,31 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
                     'precision': make_scorer(precision_score),
                     'recall': make_scorer(recall_score)
                     }
-                results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
-                accuracy_scores.append(results['test_accuracy'].mean())
-                f1_scores.append(results['test_f1'].mean())
-                precision_scores.append(results['test_precision'].mean())
-                recall_scores.append(results['test_recall'].mean())
+                results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring, return_train_score=True)
+                accuracy_train_scores.append(results['train_accuracy'].mean())
+                f1_train_scores.append(results['train_f1'].mean())
+                precision_train_scores.append(results['train_precision'].mean())
+                recall_train_scores.append(results['train_recall'].mean())
+
+                accuracy_test_scores.append(results['test_accuracy'].mean())
+                f1_test_scores.append(results['test_f1'].mean())
+                precision_test_scores.append(results['test_precision'].mean())
+                recall_test_scores.append(results['test_recall'].mean())
 
             if three_class:
                 if balanced:
-                    plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced Three Class',three_class=True)
+                    plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced Three Class',three_class=True)
                 else:
-                    plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced Three Class',three_class=True)
+                    plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced Three Class',three_class=True)
             else:
                 if balanced:
-                    plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced',three_class=False)
+                    plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced',three_class=False)
                 else:
-                    plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced',three_class=False)
+                    plot_scores(n_estimators_values,  accuracy_train_scores, accuracy_test_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced',three_class=False)
 
         
-            accuracy_scores = np.array(accuracy_scores)
-            best_acc = accuracy_scores.argmax()
+            accuracy_test_scores = np.array(accuracy_test_scores)
+            best_acc = accuracy_test_scores.argmax()
 
             model = GradientBoostingClassifier(
                     loss=best_params['model__loss'],
@@ -805,26 +850,26 @@ def Naive_Bayes(X_train, y_train, X_test, y_test, balanced=True, three_class=Tru
 
     if three_class:
         if balanced:
-            with open('ThreeClass/NaiveBayesBalancedThreeClass.txt', 'w') as f:
+            with open('ThreeClassModels/NaiveBayesBalancedThreeClass.txt', 'w') as f:
                 f.write(f"Accuracy: {accuracy}\n")
                 f.write(f"F1 Score: {f1}\n")
                 f.write(f"Precision: {precision}\n")
                 f.write(f"Recall: {recall}\n")
         else:
-            with open('ThreeClass/NaiveBayesNotBalancedThreeClass.txt', 'w') as f:
+            with open('ThreeClassModels/NaiveBayesNotBalancedThreeClass.txt', 'w') as f:
                 f.write(f"Accuracy: {accuracy}\n")
                 f.write(f"F1 Score: {f1}\n")
                 f.write(f"Precision: {precision}\n")
                 f.write(f"Recall: {recall}\n")
     else:
         if balanced:
-            with open('BinaryClass/NaiveBayesBalanced.txt', 'w') as f:
+            with open('BinaryModels/NaiveBayesBalanced.txt', 'w') as f:
                 f.write(f"Accuracy: {accuracy}\n")
                 f.write(f"F1 Score: {f1}\n")
                 f.write(f"Precision: {precision}\n")
                 f.write(f"Recall: {recall}\n")
         else:
-            with open('BinaryClass/NaiveBayesNotBalanced.txt', 'w') as f:
+            with open('BinaryModels/NaiveBayesNotBalanced.txt', 'w') as f:
                 f.write(f"Accuracy: {accuracy}\n")
                 f.write(f"F1 Score: {f1}\n")
                 f.write(f"Precision: {precision}\n")
@@ -832,15 +877,15 @@ def Naive_Bayes(X_train, y_train, X_test, y_test, balanced=True, three_class=Tru
 
 def main():
     
-    '''X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
 
     #Random Forest 
     print("Random Forest non bilanciato binario")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)
-    #training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)'''
+    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)
 
-    '''# Logistic Regression
+    # Logistic Regression
     print("Logistic Regression non bilanciato binario")
     best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
     training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=False, three_class=False)
@@ -853,7 +898,7 @@ def main():
     # Gradient Boosting
     print("Gradient Boosting non bilanciato binario")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
-    training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)
+    #training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)
     training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)
     
     X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=True)
@@ -878,17 +923,17 @@ def main():
     print("Gradient Boosting non bilanciato tre classi")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
     training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=True)
-    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=True)'''
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=True)
 
 
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=False)
 
-    '''#Random Forest
+    #Random Forest
     print("Random Forest bilanciato binario")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
-    training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)'''
-    '''training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
+    training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
+    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
 
     # Logistic Regression
     print("Logistic Regression bilanciato binario")
@@ -904,7 +949,7 @@ def main():
     print("Gradient Boosting bilanciato binario")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
     training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)
-    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)'''
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)
 
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
@@ -913,7 +958,7 @@ def main():
     print("Random Forest bilanciato tre classi")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
-    '''training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
+    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
 
     # Logistic Regression
     print("Logistic Regression bilanciato tre classi")
@@ -943,7 +988,7 @@ def main():
     Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=False)
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=False, only_categorical=True, three_class=True)
-    Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)'''
+    Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)
 
 
 main()
