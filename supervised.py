@@ -925,6 +925,43 @@ def train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_te
         X_test_without_one_feature = X_test.drop(columns=[feature])
         training_LogisticRegression(X_train_without_one_feature, y_train, X_test_without_one_feature, y_test, best_params_lr, balanced=True, three_class=True, without_one_feature=True, feature=feature)
 
+# funzione che effettua il training di un modello di regressione logistica restituendo l'accuracy
+def train_logistic_regression(X_train, y_train, X_test, y_test, best_params_lr):
+    model = LogisticRegression(
+        penalty=best_params_lr['model__penalty'],
+        C=best_params_lr['model__C'],
+        solver=best_params_lr['model__solver'],
+        max_iter=best_params_lr['model__max_iter']
+    )
+    pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+    pipe.fit(X_train, y_train)
+    y_pred = pipe.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    return accuracy
+
+def train_logistic_regression_adding_one_feature(X_train, y_train, X_test, y_test, best_params_lr):
+    accuracy = 0
+    
+    for feature in X_train:
+        X_train_adding_one_feature = X_train[[feature]]
+        X_test_adding_one_feature = X_test[[feature]]
+        accuracy_feature = train_logistic_regression(X_train_adding_one_feature, y_train, X_test_adding_one_feature, y_test, best_params_lr)
+        print(f"Feature: {feature}, Accuracy: {accuracy_feature}")
+        if accuracy_feature >= accuracy:
+            accuracy = accuracy_feature
+            best_feature = feature
+
+    print(f"Best feature: {best_feature}")
+    print(f"Accuracy: {accuracy}")
+    
+
+
+
+    
+
+        
+        
+    
 def main():
     
     #X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
@@ -1043,7 +1080,9 @@ def main():
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
     best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
     training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=True, three_class=True)
-    train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
+    '''train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_test, best_params_lr)'''
+    train_logistic_regression_adding_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
+
 
 main()
 
