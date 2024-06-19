@@ -1,5 +1,5 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split, KFold, cross_validate, learning_curve
+from sklearn.model_selection import train_test_split, KFold, cross_validate
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -99,10 +99,15 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
 
     max_depth_values = [i for i in range(1,25)]
 
-    accuracy_scores = []
-    f1_scores = []
-    precision_scores = []
-    recall_scores = []
+    accuracy_train_scores = []
+    f1_train_scores = []
+    precision_train_scores = []
+    recall_train_scores = []
+
+    accuracy_test_scores = []
+    f1_test_scores = []
+    precision_test_scores = []
+    recall_test_scores = []
 
     for max_depth in max_depth_values:
         model = RandomForestClassifier(
@@ -127,31 +132,32 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
             'precision': make_scorer(precision_score),
             'recall': make_scorer(recall_score)
             }
-        results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring)
-        accuracy_scores.append(results['test_accuracy'].mean())
-        f1_scores.append(results['test_f1'].mean())
-        precision_scores.append(results['test_precision'].mean())
-        recall_scores.append(results['test_recall'].mean())
+        results = cross_validate(pipe, X_train, y_train, cv=kf, scoring=scoring, return_train_score=True)
+
+        accuracy_train_scores.append(results['train_accuracy'].mean())
+        f1_train_scores.append(results['train_f1'].mean())
+        precision_train_scores.append(results['train_precision'].mean())
+        recall_train_scores.append(results['train_recall'].mean())
+
+        accuracy_test_scores.append(results['test_accuracy'].mean())
+        f1_test_scores.append(results['test_f1'].mean())
+        precision_test_scores.append(results['test_precision'].mean())
+        recall_test_scores.append(results['test_recall'].mean())
 
     if three_class:
         if balanced:
-            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Balanced Three Class',three_class=True)
-            plot_learning_curve(X_train, y_train, pipe, 'Random Forest Depth Learning Curve Balanced Three Class',three_class=True)
+            plot_scores(max_depth_values, accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Random Forest Depth Balanced Three Class',three_class=True)
         else:
-            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Not Balanced Three Class',three_class=True)
-            plot_learning_curve(X_train, y_train, pipe, 'Random Forest Depth Learning Curve Not Balanced Three Class',three_class=True)
+            plot_scores(max_depth_values, accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Random Forest Depth Not Balanced Three Class',three_class=True)
     else:
         if balanced:
-            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Balanced',three_class=False)
-            plot_learning_curve(X_train, y_train, pipe, 'Random Forest Depth Learning Curve Balanced',three_class=False)
+            plot_scores(max_depth_values, accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Random Forest Depth Balanced',three_class=False)
         else:
-            plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Random Forest Depth Not Balanced',three_class=False)
-            plot_learning_curve(X_train, y_train, pipe, 'Random Forest Depth Learning Curve Not Balanced',three_class=False)
-    
+            plot_scores(max_depth_values, accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Random Forest Depth Not Balanced',three_class=False)
  
     #convertire in numpy array per usare argmax
-    accuracy_scores = np.array(accuracy_scores)
-    best_accuracy = accuracy_scores.argmax()
+    accuracy_test_scores = np.array(accuracy_test_scores)
+    best_accuracy = accuracy_test_scores.argmax()
 
     model = RandomForestClassifier(
             criterion=best_params['model__criterion'],
@@ -161,6 +167,7 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
     
     pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
     pipe.fit(X_train, y_train)
+    
     y_pred = pipe.predict(X_test)
 
     if three_class:
@@ -175,6 +182,7 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
             plot_confusion_matrix(y_test, y_pred, 'RandomForestMaxDepthNotBalanced',three_class=False)
 
     if three_class:
+
         accuracy = accuracy_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred, average='macro', zero_division=0)
         precision = precision_score(y_test, y_pred, average='macro', zero_division=0)
@@ -253,17 +261,13 @@ def training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best
         if three_class:
             if balanced:
                 plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Balanced Three Class',three_class=True)
-                plot_learning_curve(X_train, y_train, pipe, 'Random Forest Estimators Learning Curve Balanced Three Class',three_class=True)
             else:
                 plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Not Balanced Three Class',three_class=True)
-                plot_learning_curve(X_train, y_train, pipe, 'Random Forest Estimators Learning Curve Not Balanced Three Class',three_class=True)
         else:
             if balanced:
                 plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Balanced',three_class=False)
-                plot_learning_curve(X_train, y_train, pipe, 'Random Forest Estimators Learning Curve Balanced',three_class=False)
             else:
                 plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Random Forest Estimators Not Balanced',three_class=False)
-                plot_learning_curve(X_train, y_train, pipe, 'Random Forest Estimators Learning Curve Not Balanced',three_class=False)
 
         accuracy_scores = np.array(accuracy_scores)
         best_accuracy = accuracy_scores.argmax()
@@ -371,17 +375,13 @@ def training_DecisionTree(X_train, y_train, X_test, y_test, best_params, balance
         if three_class:
             if balanced:
                 plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Balanced Three Class',three_class=True)
-                plot_learning_curve(X_train, y_train, pipe, 'Decision Tree Learning Curve Balanced Three Class',three_class=True)
             else:
                 plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Not Balanced Three Class',three_class=True)
-                plot_learning_curve(X_train, y_train, pipe, 'Decision Tree Learning Curve Not Balanced Three Class',three_class=True)
         else:
             if balanced:
                 plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Balanced',three_class=False)
-                plot_learning_curve(X_train, y_train, pipe, 'Decision Tree Learning Curve Balanced',three_class=False)
             else:
                 plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Decision Tree Not Balanced',three_class=False)
-                plot_learning_curve(X_train, y_train, pipe, 'Decision Tree Learning Curve Not Balanced',three_class=False)
 
         accuracy_scores = np.array(accuracy_scores)
         best_accuracy = accuracy_scores.argmax()
@@ -563,17 +563,13 @@ def training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best
             if three_class:
                 if balanced:
                     plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Balanced Three Class',three_class=True)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Depth Learning Curve Balanced Three Class',three_class=True)
                 else:
                     plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced Three Class',three_class=True)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Depth Learning Curve Not Balanced Three Class',three_class=True)
             else:
                 if balanced:
                     plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Balanced',three_class=False)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Depth Learning Curve Balanced',three_class=False)
                 else:
                     plot_scores(max_depth_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'Max Depth', 'Gradient Boosting Depth Not Balanced',three_class=False)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Depth Learning Curve Not Balanced',three_class=False)
 
             accuracy_scores = np.array(accuracy_scores)
             best_acc = accuracy_scores.argmax()
@@ -683,17 +679,14 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
             if three_class:
                 if balanced:
                     plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced Three Class',three_class=True)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Estimators Learning Curve Balanced Three Class',three_class=True)
                 else:
                     plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced Three Class',three_class=True)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Estimators Learning Curve Not Balanced Three Class',three_class=True)
             else:
                 if balanced:
                     plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Balanced',three_class=False)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Estimators Learning Curve Balanced',three_class=False)
                 else:
                     plot_scores(n_estimators_values, accuracy_scores, f1_scores, precision_scores, recall_scores, 'N Estimators', 'Gradient Boosting Estimators Not Balanced',three_class=False)
-                    plot_learning_curve(X_train, y_train, pipe, 'Gradient Boosting Estimators Learning Curve Not Balanced',three_class=False)
+
         
             accuracy_scores = np.array(accuracy_scores)
             best_acc = accuracy_scores.argmax()
@@ -760,42 +753,14 @@ def training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, 
                         f.write(f"Precision: {precision}\n")
                         f.write(f"Recall: {recall}\n")
 
-def plot_scores(x_values, accuracy_scores, f1_scores, precision_scores, recall_scores, x_label, title, three_class=True):
-    plt.figure(figsize=(12, 8))
-    
-    plt.plot(x_values, accuracy_scores, marker='o', label='Accuracy')
-    plt.plot(x_values, f1_scores, marker='o', label='F1 Score')
-    plt.plot(x_values, precision_scores, marker='o', label='Precision')
-    plt.plot(x_values, recall_scores, marker='o', label='Recall')
-    plt.ylim(0.5, 1)
+def plot_scores(x_values, accuracy_train_scores, accuracy_test_scores, x_label, title, three_class=True):
+    plt.figure(figsize=(10, 7))
+    plt.plot(x_values, accuracy_train_scores, label='Train')
+    plt.plot(x_values, accuracy_test_scores, label='Test')
     plt.xlabel(x_label)
-    plt.ylabel('Scores')
+    plt.ylabel('Accuracy')
     plt.title(title)
     plt.legend()
-    plt.grid(True)
-    if three_class:
-        plt.savefig(f'ThreeClassModels/{title}.png')
-    else:
-        plt.savefig(f'BinaryModels/{title}.png')
-
-def plot_learning_curve(X_train, y_train, model, title, three_class=True):
-    train_sizes, train_scores, test_scores = learning_curve(model, X_train, y_train, cv=5, n_jobs=-1, train_sizes=np.linspace(.1, 1.0, 10))
-    train_scores_mean = np.mean(train_scores, axis=1)
-    train_scores_std = np.std(train_scores, axis=1)
-    test_scores_mean = np.mean(test_scores, axis=1)
-    test_scores_std = np.std(test_scores, axis=1)
-
-    plt.figure(figsize=(10, 7))
-    plt.grid()
-    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
-             label="Training score")
-    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
-             label="Cross-validation score")
-
-    plt.xlabel("Training examples")
-    plt.ylabel("Score")
-    plt.legend(loc="best")
-    plt.title(title)
     if three_class:
         plt.savefig(f'ThreeClassModels/{title}.png')
     else:
@@ -873,9 +838,9 @@ def main():
     print("Random Forest non bilanciato binario")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)
-    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)
+    #training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)'''
 
-    # Logistic Regression
+    '''# Logistic Regression
     print("Logistic Regression non bilanciato binario")
     best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
     training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=False, three_class=False)
@@ -919,11 +884,11 @@ def main():
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=False)
 
-    #Random Forest
+    '''#Random Forest
     print("Random Forest bilanciato binario")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
-    training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
-    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
+    training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)'''
+    '''training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
 
     # Logistic Regression
     print("Logistic Regression bilanciato binario")
@@ -939,7 +904,7 @@ def main():
     print("Gradient Boosting bilanciato binario")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
     training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)
-    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)'''
 
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
@@ -948,7 +913,7 @@ def main():
     print("Random Forest bilanciato tre classi")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
-    training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
+    '''training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
 
     # Logistic Regression
     print("Logistic Regression bilanciato tre classi")
@@ -978,7 +943,7 @@ def main():
     Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=False)
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=False, only_categorical=True, three_class=True)
-    Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)
+    Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)'''
 
 
 main()
