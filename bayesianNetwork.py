@@ -6,10 +6,6 @@ from pgmpy.estimators import MaximumLikelihoodEstimator
 import matplotlib.pyplot as plt
 import networkx as nx
 from pgmpy.inference import VariableElimination
-from pgmpy.readwrite import BIFWriter, XMLBIFWriter
-from imblearn.over_sampling import SMOTE
-from collections import Counter
-from sklearn.preprocessing import LabelEncoder
 
 def create_Bayesian_Network():
 # Carica il dataset
@@ -123,8 +119,6 @@ def query_BN(model):
     print("Risultato della query che calcola la probabilità dei risultato delle ispezioni pdato che una struttura ha violazioni serie:")
     print(result)
 
-    #Query che calcola la probabilità 
-
 
 #funzione che effettua forward sampling per generare campioni casuali
 def forward_sampling(model, n_samples=10):
@@ -155,12 +149,15 @@ def load_BN():
     visualizeBayesianNetwork(model)
     return model
 
-#model = create_Bayesian_Network()
-model = load_BN()
-samples = forward_sampling(model, n_samples=1000)
-query_BN(model)
-#cicla sul numero di campioni generati
-for i in range(0, 10):
-    evidence = samples.iloc[i].to_dict()
-    posterior_probability(model, 'RESULTS', evidence)
+def main():
+    #model = create_Bayesian_Network()
+    model = load_BN()
+    samples = forward_sampling(model, n_samples=1000)
+    query_BN(model)
+    #cicla sul numero di campioni generati
+    for i in range(0, 10):
+        evidence = samples.iloc[i].to_dict()
+        posterior_probability(model, 'RESULTS', evidence)
+
+main()
 
