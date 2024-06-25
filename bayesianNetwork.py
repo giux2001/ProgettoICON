@@ -90,38 +90,40 @@ def query_BN(model):
     inference = VariableElimination(model)
 
     result = inference.query(variables=['IS_HIGH_BELOW_POVERTY_LEVEL'], evidence={'RESULTS': 'PASS'})
-    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di povertà dato che un ristorante ha passato l'ispezione:")
+    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di povertà dato che una struttura ha passato l'ispezione:")
     print(result)
 
     #Query che calcola la probabilità che un'area abbia un basso indice di salute dato che un ristorante ha passato l'ispezione
     result = inference.query(variables=['IS_LOW_HEALTH_AREA'], evidence={'RESULTS': 'PASS'})
-    print("Risultato della query che calcola la probabilità che un'area abbia un basso indice di salute dato che un ristorante ha passato l'ispezione:")
+    print("Risultato della query che calcola la probabilità che un'area abbia un basso indice di salute dato che una struttura ha passato l'ispezione:")
     print(result)
 
     #Query che calcola la probabilità che un'area abbia un alto tasso di disoccupazione dato che un ristorante ha passato l'ispezione
     result = inference.query(variables=['IS_HIGH_UNEMPLOYMENT_RATE'], evidence={'RESULTS': 'PASS'})
-    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di disoccupazione dato che un ristorante ha passato l'ispezione:")
+    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di disoccupazione dato che una struttura ha passato l'ispezione:")
     print(result)
 
     #Query che calcola la probabilità che un'area abbia un alto tasso di criminalità dato che un ristorante ha passato l'ispezione
     result = inference.query(variables=['IS_HIGH_CRIME_AREA'], evidence={'RESULTS': 'PASS'})
-    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di criminalità dato che un ristorante ha passato l'ispezione:")
+    print("Risultato della query che calcola la probabilità che un'area abbia un alto tasso di criminalità dato che una struttura ha passato l'ispezione:")
     print(result)
 
     #Query che calcola la probabilità che un ristorante abbia un basso reddito pro capite dato che ha passato l'ispezione
     result = inference.query(variables=['IS_LOW_PER_CAPITA_INCOME'], evidence={'RESULTS': 'PASS'})
-    print("Risultato della query che calcola la probabilità che un ristorante abbia un basso reddito pro capite dato che ha passato l'ispezione:")
+    print("Risultato della query che calcola la probabilità che una struttura abbia un basso reddito pro capite dato che ha passato l'ispezione:")
     print(result)
 
     #Query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione
     result = inference.query(variables=['HAS_INSP_SERIOUS_VIOL'], evidence={'RESULTS': 'PASS'})
-    print("Risultato della query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione:")
+    print("Risultato della query che calcola la probabilità che una struttura abbia violazioni serie dato che ha passato l'ispezione:")
     print(result)
 
     #Query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezioneù
-    result = inference.query(variables=['RESULTS'], evidence={'HAS_INSP_SERIOUS_VIOL': 1, 'IS_HIGH_CRIME_AREA': 1, 'IS_LOW_HEALTH_AREA': 1})
-    print("Risultato della query che calcola la probabilità che un ristorante abbia violazioni serie dato che ha passato l'ispezione con condizioni:")
+    result = inference.query(variables=['RESULTS'], evidence={'HAS_INSP_SERIOUS_VIOL': 1})
+    print("Risultato della query che calcola la probabilità dei risultato delle ispezioni pdato che una struttura ha violazioni serie:")
     print(result)
+
+    #Query che calcola la probabilità 
 
 
 #funzione che effettua forward sampling per generare campioni casuali
