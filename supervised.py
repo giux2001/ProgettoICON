@@ -945,19 +945,15 @@ def train_logistic_regression_with_one_feature(X_train, y_train, X_test, y_test,
     print(f"Best feature: {best_feature}")
     print(f"Accuracy: {accuracy}")
     
-
-
-
-    
-
         
         
     
 def main():
     
-    #X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
+    print("TRAINING MODELLI SU DATI NON BILANCIATI E SU DUE CLASSI")
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=False)
 
-    '''#Random Forest 
+    #Random Forest 
     print("Random Forest non bilanciato binario")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=False)
@@ -977,12 +973,13 @@ def main():
     print("Gradient Boosting non bilanciato binario")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
     #training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)
-    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)'''
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=False)
     
-    #X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=True)
+    print("TRAINING MODELLI SU DATI NON BILANCIATI E SU TRE CLASSI")
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=False, three_class=True)
 
     #Random Forest
-    '''print("Random Forest non bilanciato tre classi")
+    print("Random Forest non bilanciato tre classi")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=True)
     training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=False, three_class=True)
@@ -1001,14 +998,14 @@ def main():
     print("Gradient Boosting non bilanciato tre classi")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
     training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=True)
-    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=True)'''
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=False, three_class=True)
 
 
-
-    #X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=False)
+    print("TRAINING MODELLI SU DATI BILANCIATI E SU DUE CLASSI")
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=False)
 
     #Random Forest
-    '''print("Random Forest bilanciato binario")
+    print("Random Forest bilanciato binario")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
     training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=False)
@@ -1027,13 +1024,14 @@ def main():
     print("Gradient Boosting bilanciato binario")
     best_params_gb = search_best_hyperparameters(X_train, y_train, 'GradientBoosting')
     training_GradientBoosting_on_maxdepth(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)
-    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)'''
+    training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=False)
 
 
-    #X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
+    print("TRAINING MODELLI SU DATI BILANCIATI E SU TRE CLASSI")
+    X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
 
     #Random Forest
-    '''print("Random Forest bilanciato tre classi")
+    print("Random Forest bilanciato tre classi")
     best_params_rf = search_best_hyperparameters(X_train, y_train, 'RandomForest')
     training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
     training_randomforest_on_n_estimators(X_train, y_train, X_test, y_test, best_params_rf, balanced=True, three_class=True)
@@ -1042,6 +1040,9 @@ def main():
     print("Logistic Regression bilanciato tre classi")
     best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
     training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=True, three_class=True)
+    #Regressione logistica con una sola feature
+    training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=True, three_class=True)
+    train_logistic_regression_with_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
 
     # Decision Tree
     print("Decision Tree bilanciato tre classi")
@@ -1055,7 +1056,7 @@ def main():
     training_GradientBoosting_on_n_estimators(X_train, y_train, X_test, y_test, best_params_gb, balanced=True, three_class=True)
 
     # Naive Bayes
-    print("Naive Bayes")
+    print("TRAINING NAIVE BAYES SU DATI BILANCIATI E NON BILANCIATI E SU DUE CLASSI E TRE CLASSI")
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, only_categorical=True, three_class=False)
     Naive_Bayes(X_train, y_train, X_test, y_test, balanced=True, three_class=False)
 
@@ -1066,13 +1067,7 @@ def main():
     Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=False)
 
     X_train, y_train, X_test, y_test = preprocess_data(balanced=False, only_categorical=True, three_class=True)
-    Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)'''
-
-    X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
-    best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
-    training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=True, three_class=True)
-    train_logistic_regression_with_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
-
+    Naive_Bayes(X_train, y_train, X_test, y_test, balanced=False, three_class=True)
 
 main()
 

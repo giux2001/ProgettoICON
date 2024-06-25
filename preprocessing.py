@@ -2,7 +2,6 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 import re
-from pyswip import Prolog
 
 FOOD_INSPECTIONS = "dataset/Food_Inspections_20240520.csv"
 PUBLIC_HEALTH_STATISTICS = "dataset/Public_Health_Statistics_-_Selected_public_health_indicators_by_Chicago_community_area_-_Historical_20240520.csv"
@@ -29,8 +28,8 @@ def preprocesse_food_inspections():
     valori_da_rimuovere = ["No Entry", "Out of Business", "Business Not Located", "Not Ready"]
     df = df[~df['Results'].isin(valori_da_rimuovere)]
 
-    mapping_results = { #Mappatura di Pass w/ Conditions e Pass in 1, Fail in 0 (potremmo anche fare Pass Conditions a altro valore)
-    "Pass w/ Conditions": 2, #oppure possiamo proprio rimuovere Pass w/ Conditions
+    mapping_results = { 
+    "Pass w/ Conditions": 2,
     "Fail": 0,
     "Pass": 1,
     }
@@ -38,13 +37,10 @@ def preprocesse_food_inspections():
     df["Results"] = df["Results"].map(mapping_results)
 
     df["Facility Type"] = df["Facility Type"].replace("Daycare (2 - 6 Years)", "Daycare")
-    #Sostituisci daycare (under 2 years) con daycare
     df["Facility Type"] = df["Facility Type"].replace("Daycare (Under 2 Years)", "Daycare")
-    #Sostituisci daycare (2 - 6 years) with daycare
     df["Facility Type"] = df["Facility Type"].replace("Daycare Above and Under 2 Years", "Daycare")
-    #Sostituisci shared kitchen user (Long Term) con shared kitchen
     df["Facility Type"] = df["Facility Type"].replace("Shared Kitchen User (Long Term)", "Shared Kitchen")
-    #cancella le righe con Facility Type che hanno meno di 30 occorrenze
+    
     df = df.groupby('Facility Type').filter(lambda x: len(x) > 30)
 
     df = df.dropna(subset=['Latitude', 'Longitude'])
@@ -61,14 +57,38 @@ def preprocesse_food_inspections():
 
     df.drop(["Latitude", "Longitude"], axis=1, inplace=True)
     #Rinomina la colonna Location in Community Area
-    df.rename(columns={"Location": "Community Area Name"}, inplace=True)
-    #salva il dataset in un file csv
-    #df.to_csv("dataset/Food_Inspections_preprocessed.csv", index=False)
+    
+    d = mapping_violations()
+    df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
+    #aggiungere alte colonne al dataframe
+    df["No Violations"] = 0
+    df["Violations on Management and Supervision"] = 0
+    df["Violations on Hygiene and Food Security"] = 0
+    df["Violations on Temperature and Special Procedures"] = 0
+    df["Violations on Food Safety and Quality"] = 0
+    df["Violations on Instrument storage and Maintenance"] = 0
+    df["Violations on Facilities and regulations"] = 0
 
-    #df = pd.read_csv("dataset/Food_Inspections_preprocessed.csv")
-    #visualizza tutte le occorrenze dei valori della colonna Facility Type
-    #df = pd.read_csv("dataset/Food_Inspections_preprocessed.csv")
-    #Sostituisci daycare (2 - 6 years) con daycare
+    #ciclare su chiavi e valori del dizionario
+    for key, value in d.items():
+        for v in value:
+            if v == 0:
+                df.loc[df["DBA Name"] == key, "No Violations"] = 1
+            if v >= 1 and v <= 10:
+                df.loc[df["DBA Name"] == key, "Violations on Management and Supervision"] = 1
+            if v >= 11 and v <= 17 or v >= 27 and v <= 28:
+                df.loc[df["DBA Name"] == key, "Violations on Hygiene and Food Security"] = 1
+            if (v >= 18 and v <= 26) or v == 29:
+                df.loc[df["DBA Name"] == key, "Violations on Temperature and Special Procedures"] = 1
+            if (v >= 30 and v <= 32) or (v >= 37 and v <= 42):
+                df.loc[df["DBA Name"] == key, "Violations on Food Safety and Quality"] = 1
+            if v >= 33 and v <= 36 or v >= 43 and v <= 49:
+                df.loc[df["DBA Name"] == key, "Violations on Instrument storage and Maintenance"] = 1
+            if v >= 50 and v <= 63:
+                df.loc[df["DBA Name"] == key, "Violations on Facilities and regulations"] = 1
+ 
+    colonne_da_eliminare = ["Violations", "Inspection Date"]
+    df.drop(colonne_da_eliminare, axis=1, inplace=True)
     
     df.to_csv("dataset/Food_Inspections_preprocessed.csv", index=False)
 
@@ -138,38 +158,9 @@ def mapping_violations():
 
     return diz
 
-d = mapping_violations()
-df = pd.read_csv("Food_Inspections_and_Health_Statistics.csv")
-#aggiungere alte colonne al dataframe
-df["No Violations"] = 0
-df["Violations on Management and Supervision"] = 0
-df["Violations on Hygiene and Food Security"] = 0
-df["Violations on Temperature and Special Procedures"] = 0
-df["Violations on Food Safety and Quality"] = 0
-df["Violations on Instrument storage and Maintenance"] = 0
-df["Violations on Facilities and regulations"] = 0
+def main():
+    food = preprocesse_food_inspections()
+    health = preprocesse_public_health_statistics()
+    joinDataset(food, health)
 
-#ciclare su chiavi e valori del dizionario
-i = 0
-for key, value in d.items():
-    print(i)
-    for v in value:
-        if v == 0:
-            df.loc[df["DBA Name"] == key, "No Violations"] = 1
-        if v >= 1 and v <= 10:
-            df.loc[df["DBA Name"] == key, "Violations on Management and Supervision"] = 1
-        if v >= 11 and v <= 17 or v >= 27 and v <= 28:
-            df.loc[df["DBA Name"] == key, "Violations on Hygiene and Food Security"] = 1
-        if (v >= 18 and v <= 26) or v == 29:
-            df.loc[df["DBA Name"] == key, "Violations on Temperature and Special Procedures"] = 1
-        if (v >= 30 and v <= 32) or (v >= 37 and v <= 42):
-            df.loc[df["DBA Name"] == key, "Violations on Food Safety and Quality"] = 1
-        if v >= 33 and v <= 36 or v >= 43 and v <= 49:
-            df.loc[df["DBA Name"] == key, "Violations on Instrument storage and Maintenance"] = 1
-        if v >= 50 and v <= 63:
-            df.loc[df["DBA Name"] == key, "Violations on Facilities and regulations"] = 1
-    i = i + 1
- 
-colonne_da_eliminare = ["Violations", "Inspection Date"]
-df.drop(colonne_da_eliminare, axis=1, inplace=True)
-df.to_csv("Food_Inspections_and_Health_Statistics.csv", index=False)
+main()
