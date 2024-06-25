@@ -41,7 +41,7 @@ def preprocess_data(balanced = True, only_categorical = False, three_class = Tru
         X = df.drop(['INSPECTION_ID', 'DBA NAME', 'RESULTS', 'COMMUNITY_AREA'], axis=1)
         y = df['RESULTS']
     
-    #splitta in train e test
+    #split in train e test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     if balanced:
@@ -163,7 +163,6 @@ def training_randomforest_on_maxdepth(X_train, y_train, X_test, y_test, best_par
         else:
             plot_scores(max_depth_values, accuracy_train_scores, accuracy_test_scores, 'Max Depth', 'Random Forest Depth Not Balanced',three_class=False)
  
-    #convertire in numpy array per usare argmax
     accuracy_test_scores = np.array(accuracy_test_scores)
     best_accuracy = accuracy_test_scores.argmax()
 
@@ -488,7 +487,7 @@ def training_LogisticRegression(X_train, y_train, X_test, y_test, best_params, b
         C=best_params['model__C'],
         solver=best_params['model__solver'],
         max_iter=best_params['model__max_iter'],
-        multi_class='multinomial'  # Specificare la regressione logistica multinomiale
+        multi_class='multinomial'  
     )
     else:
         model = LogisticRegression(
@@ -843,33 +842,29 @@ def plot_confusion_matrix(y_test, y_pred, model_name, three_class=True):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title(f'Confusion Matrix {model_name}')
-    #salva la matrice di confusione in un file
+
     if three_class:
         plt.savefig(f'ThreeClassModels/ConfusionMatrix{model_name}.png')
     else:
         plt.savefig(f'BinaryModels/ConfusionMatrix{model_name}.png')
 
-# funzione che plotta l'istogramma che rappresententa la distribuzione dei results 
+
 def plot_histogram(data, title, three_class=True):
-    # Convertire i valori di result in etichette "Not Pass", "Pass" e "Pass with Conditions"
+    
     label_map = {0: 'FAIL', 1: 'PASS', 2: 'PASS WITH CONDITIONS'} if three_class else {0: 'FAIL', 1: 'PASS'}
     data_label = data.map(label_map)
     
-    # Conteggiare le occorrenze di ogni etichetta
     counts = data_label.value_counts()
     
-    # Definire i colori
     color_map = {'FAIL': 'red', 'PASS': 'green', 'PASS WITH CONDITIONS': 'yellow'}
     colors = [color_map[label] for label in counts.index]
     
-    # Plot dell'istogramma
     plt.figure(figsize=(10, 7))
     sns.barplot(x=counts.index, y=counts.values, palette=colors)
     plt.title(title)
     plt.xlabel('Result')
     plt.ylabel('Frequency')
     
-    # Salvare il plot nei percorsi appropriati
     if three_class:
         plt.savefig(f'Histogram{title}.png')
     else:
@@ -918,14 +913,6 @@ def Naive_Bayes(X_train, y_train, X_test, y_test, balanced=True, three_class=Tru
                 f.write(f"Precision: {precision}\n")
                 f.write(f"Recall: {recall}\n")
 
-def train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_test, best_params_lr):
-    for feature in X_train:
-        print(f"Training Logistic Regression without {feature}")
-        X_train_without_one_feature = X_train.drop(columns=[feature])
-        X_test_without_one_feature = X_test.drop(columns=[feature])
-        training_LogisticRegression(X_train_without_one_feature, y_train, X_test_without_one_feature, y_test, best_params_lr, balanced=True, three_class=True, without_one_feature=True, feature=feature)
-
-# funzione che effettua il training di un modello di regressione logistica restituendo l'accuracy
 def train_logistic_regression(X_train, y_train, X_test, y_test, best_params_lr):
     model = LogisticRegression(
         penalty=best_params_lr['model__penalty'],
@@ -939,14 +926,18 @@ def train_logistic_regression(X_train, y_train, X_test, y_test, best_params_lr):
     accuracy = accuracy_score(y_test, y_pred)
     return accuracy
 
-def train_logistic_regression_adding_one_feature(X_train, y_train, X_test, y_test, best_params_lr):
+def train_logistic_regression_with_one_feature(X_train, y_train, X_test, y_test, best_params_lr):
     accuracy = 0
     
     for feature in X_train:
         X_train_adding_one_feature = X_train[[feature]]
         X_test_adding_one_feature = X_test[[feature]]
         accuracy_feature = train_logistic_regression(X_train_adding_one_feature, y_train, X_test_adding_one_feature, y_test, best_params_lr)
+        #salva la feature e la relativa accuracy in un file
+        with open('ThreeClassModels/LogisticRegressionFeaturesAccuracy.txt', 'a') as f:
+            f.write(f"Feature: {feature}, Accuracy: {accuracy_feature}\n")
         print(f"Feature: {feature}, Accuracy: {accuracy_feature}")
+
         if accuracy_feature >= accuracy:
             accuracy = accuracy_feature
             best_feature = feature
@@ -1080,8 +1071,7 @@ def main():
     X_train, y_train, X_test, y_test = preprocess_data(balanced=True, three_class=True)
     best_params_lr = search_best_hyperparameters(X_train, y_train, 'LogisticRegression')
     training_LogisticRegression(X_train, y_train, X_test, y_test, best_params_lr, balanced=True, three_class=True)
-    '''train_logistic_regression_without_one_feature(X_train, y_train, X_test, y_test, best_params_lr)'''
-    train_logistic_regression_adding_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
+    train_logistic_regression_with_one_feature(X_train, y_train, X_test, y_test, best_params_lr)
 
 
 main()
